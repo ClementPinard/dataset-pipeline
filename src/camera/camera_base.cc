@@ -64,10 +64,13 @@ class CameraFactory : public CameraFactoryBase {
 
 std::vector<std::shared_ptr<CameraFactoryBase>> camera_name_mapping =
     {std::shared_ptr<CameraFactoryBase>(new CameraFactory<PinholeCamera>(CameraBase::Type::kPinhole, "PINHOLE")),
+    std::shared_ptr<CameraFactoryBase>(new CameraFactory<SimplePinholeCamera>(CameraBase::Type::kSimplePinhole, "SIMPLE_PINHOLE")),
      std::shared_ptr<CameraFactoryBase>(new CameraFactory<FisheyeFOVCamera>(CameraBase::Type::kFOV, "FOV")),
      std::shared_ptr<CameraFactoryBase>(new CameraFactory<FisheyePolynomial4Camera>(CameraBase::Type::kFisheyePolynomial4, "OPENCV_FISHEYE")),
      std::shared_ptr<CameraFactoryBase>(new CameraFactory<FisheyePolynomialTangentialCamera>(CameraBase::Type::kFisheyePolynomialTangential, "FISHEYE_POLYNOMIAL_2_TANGENTIAL_2")),
      std::shared_ptr<CameraFactoryBase>(new CameraFactory<PolynomialCamera>(CameraBase::Type::kPolynomial, "POLYNOMIAL_3")),
+     std::shared_ptr<CameraFactoryBase>(new CameraFactory<RadialCamera>(CameraBase::Type::kRadial, "RADIAL")),
+     std::shared_ptr<CameraFactoryBase>(new CameraFactory<SimpleRadialCamera>(CameraBase::Type::kSimpleRadial, "SIMPLE_RADIAL")),
      std::shared_ptr<CameraFactoryBase>(new CameraFactory<PolynomialTangentialCamera>(CameraBase::Type::kPolynomialTangential, "OPENCV")),
      std::shared_ptr<CameraFactoryBase>(new CameraFactory<BenchmarkCamera>(CameraBase::Type::kBenchmark, "THIN_PRISM_FISHEYE")),
      std::shared_ptr<CameraFactoryBase>(new CameraFactory<PinholeCamera>(CameraBase::Type::kInvalid, "INVALID"))};

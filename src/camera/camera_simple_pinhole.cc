@@ -27,17 +27,30 @@
 // POSSIBILITY OF SUCH DAMAGE.
 
 
-#pragma once
-
-// Includes all camera models.
-#include "camera/camera_base.h"
-#include "camera/camera_benchmark.h"
-#include "camera/camera_fisheye_fov.h"
-#include "camera/camera_fisheye_polynomial_4.h"
-#include "camera/camera_fisheye_polynomial_tangential.h"
-#include "camera/camera_pinhole.h"
 #include "camera/camera_simple_pinhole.h"
-#include "camera/camera_polynomial.h"
-#include "camera/camera_radial.h"
-#include "camera/camera_simple_radial.h"
-#include "camera/camera_polynomial_tangential.h"
+
+#include <glog/logging.h>
+
+namespace camera {
+SimplePinholeCamera::SimplePinholeCamera(int width, int height, float f,
+                                         float cx, float cy)
+    : CameraBase(width, height, f, f, cx, cy, Type::kSimplePinhole) {}
+
+SimplePinholeCamera::SimplePinholeCamera(int width, int height, const float* parameters)
+    : CameraBase(width, height, parameters[0], parameters[0], parameters[1], parameters[2], Type::kSimplePinhole) {}
+
+CameraBase* SimplePinholeCamera::ScaledBy(float factor) const {
+  CHECK_NE(factor, 0.0f);
+  int scaled_width = static_cast<int>(factor * width_);
+  int scaled_height = static_cast<int>(factor * height_);
+  return new SimplePinholeCamera(scaled_width, scaled_height,
+                                 factor * fx(),
+                                 factor * (cx() + 0.5f) - 0.5f,
+                                 factor * (cy() + 0.5f) - 0.5f);
+}
+
+CameraBase* SimplePinholeCamera::ShiftedBy(float cx_offset, float cy_offset) const {
+  return new SimplePinholeCamera(width_, height_, fx(), cx() + cx_offset,
+                           cy() + cy_offset);
+}
+}  // namespace camera

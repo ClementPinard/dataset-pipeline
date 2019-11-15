@@ -137,6 +137,32 @@ class RendererProgram<camera::PolynomialCamera> : public RendererProgramBase {
 };
 
 template <>
+class RendererProgram<camera::RadialCamera> : public RendererProgramBase {
+ public:
+  const GLchar* GetShaderUniformDefinitions() const override;
+  const GLchar* GetShaderDistortionCode() const override;
+  void GetUniformLocations(const ShaderProgramOpenGL& shader_program) override;
+  void SetUniformValues(const camera::RadialCamera& camera) const;
+
+ private:
+  GLint u_p0_location_;
+  GLint u_p1_location_;
+};
+
+template <>
+class RendererProgram<camera::SimpleRadialCamera> : public RendererProgramBase {
+ public:
+  const GLchar* GetShaderUniformDefinitions() const override;
+  const GLchar* GetShaderDistortionCode() const override;
+  void GetUniformLocations(const ShaderProgramOpenGL& shader_program) override;
+  void SetUniformValues(const camera::SimpleRadialCamera& camera) const;
+
+ private:
+  GLint u_k_location_;
+  GLint u_radius_location_;
+};
+
+template <>
 class RendererProgram<camera::PolynomialTangentialCamera> : public RendererProgramBase {
  public:
   const GLchar* GetShaderUniformDefinitions() const override;
@@ -159,6 +185,15 @@ class RendererProgram<camera::PinholeCamera> : public RendererProgramBase {
   const GLchar* GetShaderDistortionCode() const override;
   void GetUniformLocations(const ShaderProgramOpenGL& /*shader_program*/) override;
   void SetUniformValues(const camera::PinholeCamera& /*camera*/) const;
+};
+
+template <>
+class RendererProgram<camera::SimplePinholeCamera> : public RendererProgramBase {
+ public:
+  const GLchar* GetShaderUniformDefinitions() const override;
+  const GLchar* GetShaderDistortionCode() const override;
+  void GetUniformLocations(const ShaderProgramOpenGL& /*shader_program*/) override;
+  void SetUniformValues(const camera::SimplePinholeCamera& /*camera*/) const;
 };
 
 template <>

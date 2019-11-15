@@ -411,6 +411,24 @@ TEST(Camera, Pinhole) {
   RunCameraModelTests(pinhole_camera);
 }
 
+TEST(Camera, SimplePinhole) {
+  camera::SimplePinholeCamera simplepinhole_camera(kImageWidth, kImageHeight, kFX, kCX,
+                                       kCY);
+  RunCameraModelTests(simplepinhole_camera);
+}
+
+TEST(Camera, Radial) {
+  camera::RadialCamera radial_camera(kImageWidth, kImageHeight, kFX,
+                                             kFY, kCX, kCY, kK1, -kK2);
+  RunCameraModelTests(radial_camera);
+}
+
+TEST(Camera, SimpleRadial) {
+  camera::SimpleRadialCamera simple_radial_camera(kImageWidth, kImageHeight, 450,
+                                             kCX, kCY, kK1);
+  RunCameraModelTests(simple_radial_camera);
+}
+
 TEST(Camera, Polynomial) {
   camera::PolynomialCamera polynomial_camera(kImageWidth, kImageHeight, kFX,
                                              kFY, kCX, kCY, kK1, kK2, kK3);

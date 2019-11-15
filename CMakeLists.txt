@@ -93,7 +93,10 @@ add_library(BaseLib
   src/camera/camera_fisheye_polynomial_4.cc
   src/camera/camera_fisheye_polynomial_tangential.cc
   src/camera/camera_pinhole.cc
+  src/camera/camera_simple_pinhole.cc
   src/camera/camera_polynomial.cc
+  src/camera/camera_radial.cc
+  src/camera/camera_simple_radial.cc
   src/camera/camera_polynomial_tangential.cc
   
   src/icp/icp_point_to_plane.cc

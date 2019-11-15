@@ -73,6 +73,9 @@ class CameraBase {
     kFisheyePolynomialTangential = 3,
     kPinhole = 4,
     kBenchmark = 5,
+    kSimplePinhole = 7,
+    kRadial = 8,
+    kSimpleRadial = 9
   };
   
   // Default constructor, not for ordinary use!
@@ -226,6 +229,18 @@ CameraBase::Type StringToType(const std::string& type);
           static_cast<const _##object##_type&>(object);                   \
       (void)_##object;                                                    \
       (__VA_ARGS__);                                                      \
+    } else if (object.type() == camera::CameraBase::Type::kRadial) {      \
+      typedef camera::RadialCamera _##object##_type;                      \
+      const _##object##_type& _##object =                                 \
+          static_cast<const _##object##_type&>(object);                   \
+      (void)_##object;                                                    \
+      (__VA_ARGS__);                                                      \
+    } else if (object.type() == camera::CameraBase::Type::kSimpleRadial) { \
+      typedef camera::SimpleRadialCamera _##object##_type;                \
+      const _##object##_type& _##object =                                 \
+          static_cast<const _##object##_type&>(object);                   \
+      (void)_##object;                                                    \
+      (__VA_ARGS__);                                                      \
     } else if (object.type() == camera::CameraBase::Type::kPolynomialTangential) { \
       typedef camera::PolynomialTangentialCamera _##object##_type;        \
       const _##object##_type& _##object =                                 \
@@ -234,6 +249,12 @@ CameraBase::Type StringToType(const std::string& type);
       (__VA_ARGS__);                                                      \
     } else if (object.type() == camera::CameraBase::Type::kPinhole) {     \
       typedef camera::PinholeCamera _##object##_type;                     \
+      const _##object##_type& _##object =                                 \
+          static_cast<const _##object##_type&>(object);                   \
+      (void)_##object;                                                    \
+      (__VA_ARGS__);                                                      \
+    } else if (object.type() == camera::CameraBase::Type::kSimplePinhole) { \
+      typedef camera::SimplePinholeCamera _##object##_type;               \
       const _##object##_type& _##object =                                 \
           static_cast<const _##object##_type&>(object);                   \
       (void)_##object;                                                    \
@@ -273,11 +294,20 @@ CameraBase::Type StringToType(const std::string& type);
     } else if (camera_type == camera::CameraBase::Type::kPolynomial) {    \
       typedef camera::PolynomialCamera _##camera_type;                    \
       (__VA_ARGS__);                                                      \
+    } else if (camera_type == camera::CameraBase::Type::kRadial) {        \
+      typedef camera::RadialCamera _##camera_type;                        \
+      (__VA_ARGS__);                                                      \
+    } else if (camera_type == camera::CameraBase::Type::kSimpleRadial) {  \
+      typedef camera::SimpleRadialCamera _##camera_type;                  \
+      (__VA_ARGS__);                                                      \
     } else if (camera_type == camera::CameraBase::Type::kPolynomialTangential) { \
       typedef camera::PolynomialTangentialCamera _##camera_type;          \
       (__VA_ARGS__);                                                      \
     } else if (camera_type == camera::CameraBase::Type::kPinhole) {       \
       typedef camera::PinholeCamera _##camera_type;                       \
+      (__VA_ARGS__);                                                      \
+    } else if (camera_type == camera::CameraBase::Type::kSimplePinhole) { \
+      typedef camera::SimplePinholeCamera _##camera_type;                 \
       (__VA_ARGS__);                                                      \
     } else {                                                              \
       LOG(FATAL) << "CHOOSE_CAMERA_TYPE() encountered invalid type.";     \

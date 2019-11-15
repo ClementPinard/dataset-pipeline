@@ -304,6 +304,67 @@ void RendererProgram<camera::PolynomialCamera>::SetUniformValues(
   glUniform1f(u_p2_location_, camera.distortion_parameters().z());
 }
 
+const GLchar* RendererProgram<
+    camera::RadialCamera>::GetShaderUniformDefinitions() const {
+  return "uniform float p0;\n"
+         "uniform float p1;\n";
+}
+
+const GLchar*
+RendererProgram<camera::RadialCamera>::GetShaderDistortionCode() const {
+  // (Mis)using localPoint.w for intermediate results.
+  return "localPoint.w = (localPoint.x * localPoint.x + localPoint.y"
+         "               * localPoint.y) / (localPoint.z * localPoint.z);\n"
+         "localPoint.w = 1.0 + localPoint.w * (p0 + localPoint.w"
+         "               * p1);\n"
+         "localPoint.x = localPoint.w * localPoint.x;\n"
+         "localPoint.y = localPoint.w * localPoint.y;\n";
+}
+
+void RendererProgram<camera::RadialCamera>::GetUniformLocations(
+    const ShaderProgramOpenGL& shader_program) {
+  u_p0_location_ = shader_program.GetUniformLocationOrAbort("p0");
+  u_p1_location_ = shader_program.GetUniformLocationOrAbort("p1");
+}
+
+void RendererProgram<camera::RadialCamera>::SetUniformValues(
+    const camera::RadialCamera& camera) const {
+  glUniform1f(u_p0_location_, camera.distortion_parameters().x());
+  glUniform1f(u_p1_location_, camera.distortion_parameters().y());
+}
+
+const GLchar* RendererProgram<
+    camera::SimpleRadialCamera>::GetShaderUniformDefinitions() const {
+  return "uniform float k;\n"
+         "uniform float radius_cutoff;\n";
+}
+
+const GLchar*
+RendererProgram<camera::SimpleRadialCamera>::GetShaderDistortionCode() const {
+  // (Mis)using localPoint.w for intermediate results.
+  return "float r = (localPoint.x * localPoint.x + localPoint.y"
+         "               * localPoint.y) / (localPoint.z * localPoint.z);\n"
+         "if(r > radius_cutoff){"
+         " r = 99"
+         "}else{"
+         "r = 1.0 + r * k;"
+         " }\n"
+         "localPoint.x = r * localPoint.x;\n"
+         "localPoint.y = r * localPoint.y;\n";
+}
+
+void RendererProgram<camera::SimpleRadialCamera>::GetUniformLocations(
+    const ShaderProgramOpenGL& shader_program) {
+  u_k_location_ = shader_program.GetUniformLocationOrAbort("k");
+  u_radius_location_ = shader_program.GetUniformLocationOrAbort("radius_cutoff");
+}
+
+void RendererProgram<camera::SimpleRadialCamera>::SetUniformValues(
+    const camera::SimpleRadialCamera& camera) const {
+  glUniform1f(u_k_location_, camera.distortion_parameters().x());
+  glUniform1f(u_radius_location_, camera.distortion_parameters().y());
+}
+
 
 const GLchar* RendererProgram<
     camera::PolynomialTangentialCamera>::GetShaderUniformDefinitions() const {
@@ -369,6 +430,26 @@ void RendererProgram<camera::PinholeCamera>::GetUniformLocations(
 
 void RendererProgram<camera::PinholeCamera>::SetUniformValues(
     const camera::PinholeCamera& /*camera*/) const {
+  // No special values.
+}
+
+const GLchar*
+RendererProgram<camera::SimplePinholeCamera>::GetShaderUniformDefinitions() const {
+  return "";
+}
+
+const GLchar*
+RendererProgram<camera::SimplePinholeCamera>::GetShaderDistortionCode() const {
+  return "";
+}
+
+void RendererProgram<camera::SimplePinholeCamera>::GetUniformLocations(
+    const ShaderProgramOpenGL& /*shader_program*/) {
+  // No special values.
+}
+
+void RendererProgram<camera::SimplePinholeCamera>::SetUniformValues(
+    const camera::SimplePinholeCamera& /*camera*/) const {
   // No special values.
 }
 
