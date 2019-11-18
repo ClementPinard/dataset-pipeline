@@ -68,7 +68,7 @@ void UndistortAndDistortImageCornersTest(const Camera& test_camera) {
     if (fabs(nxy.x() - result.x()) > 1e-5f ||
         fabs(nxy.y() - result.y()) > 1e-5f) {
       int failing_pixels = 0;
-      cv::Mat_<cv::Vec3b> debug_image(test_camera.height(), test_camera.width());
+      cv::Mat_<cv::Vec3b> debug_image(test_camera.height(), test_camera.width(), cv::Vec3b(0,0,0));
       for (int test_y = 0; test_y < test_camera.height(); ++ test_y) {
         for (int test_x = 0; test_x < test_camera.width(); ++ test_x) {
           Eigen::Vector2f test_nxy = Eigen::Vector2f(test_camera.fx_inv() * test_x + test_camera.cx_inv(),
@@ -78,8 +78,16 @@ void UndistortAndDistortImageCornersTest(const Camera& test_camera) {
                       fabs(test_nxy.y() - test_result.y()) > 1e-5f);
           if (!ok) {
             ++ failing_pixels;
+            debug_image(test_y, test_x) = cv::Vec3b(0, 0, 255);
           }
-          debug_image(test_y, test_x) = ok ? cv::Vec3b(0, 0, 0) : cv::Vec3b(0, 0, 255);
+          if(test_x % 20 == 0 || test_y % 20 == 0){
+            Eigen::Vector2f distorted = test_camera.Distort(test_nxy);
+            int test_x2 = round(test_camera.fx() * distorted.x() + test_camera.cx());
+            int test_y2 = round(test_camera.fy() * distorted.y() + test_camera.cy());
+            if(test_x2 > 0 && test_y2 > 0 && test_x2 < test_camera.width()-1 && test_y2 < test_camera.height()-1)
+              debug_image(test_y2, test_x2) = cv::Vec3b(255, 255, 255);
+          }
+
         }
       }
       std::ostringstream window_title;
