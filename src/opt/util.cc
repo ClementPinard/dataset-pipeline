@@ -69,37 +69,4 @@ bool LoadPointClouds(
   return true;
 }
 
-bool LoadMeshes(
-    const std::string& scan_alignment_path,
-    std::vector<pcl::PolygonMesh::Ptr>* meshes) {
-  io::MeshLabMeshInfoVector scan_infos;
-  return LoadMeshes(scan_alignment_path, meshes, &scan_infos);
-}
-
-bool LoadMeshes(
-    const std::string& scan_alignment_path,
-    std::vector<pcl::PolygonMesh::Ptr>* meshes,
-    io::MeshLabMeshInfoVector* scan_infos) {
-  // Load scan poses from MeshLab project file.
-  if (!io::ReadMeshLabProject(scan_alignment_path, scan_infos)) {
-    LOG(ERROR) << "Cannot read scan poses from " << scan_alignment_path;
-    return false;
-  }
-  
-  // Load scan point clouds.
-  LOG(INFO) << "Loading meshes ...";
-  boost::filesystem::path scan_alignment_file_directory =
-      boost::filesystem::path(scan_alignment_path).parent_path();
-  *meshes =
-      io::MeshVectorFromMeshLabMeshInfoVectors(
-          *scan_infos, scan_alignment_file_directory.string());
-  if (meshes->empty()) {
-    LOG(ERROR) << "mesh is empty.";
-    return false;
-  }
-  LOG(INFO) << "Done.";
-  
-  return true;
-}
-
 }  // namespace opt

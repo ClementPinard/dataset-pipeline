@@ -28,6 +28,7 @@
 
 
 #include "opt/occlusion_geometry.h"
+#include "io/meshlab_project.h"
 
 #include <opencv2/highgui/highgui.hpp>
 #include <pcl/common/transforms.h>
@@ -63,6 +64,40 @@ bool OcclusionGeometry::AddMesh(const std::string& mesh_file_path) {
 }
 
 bool OcclusionGeometry::AddMesh(const std::string& mesh_file_path, const Sophus::SE3f& transformation) {
+  if(boost::filesystem::extension(mesh_file_path) == ".mlp"){
+    return AddMeshMeshLab(mesh_file_path, transformation);
+  }else if(boost::filesystem::extension(mesh_file_path) == ".ply"){
+    return AddMeshPLY(mesh_file_path, transformation);
+  }else{
+    LOG(ERROR) << "Mesh file format must be either .mlp or .ply, got" << mesh_file_path;
+    return false;
+  }
+}
+
+bool OcclusionGeometry::AddMeshMeshLab(const std::string& mesh_file_path, const Sophus::SE3f& transformation){
+  io::MeshLabMeshInfoVector mesh_infos;
+  // Load scan poses from MeshLab project file.
+  if (!io::ReadMeshLabProject(mesh_file_path, &mesh_infos)) {
+    LOG(ERROR) << "Cannot read mesh poses from " << mesh_file_path;
+    return false;
+  }
+
+  boost::filesystem::path scan_alignment_file_directory =
+      boost::filesystem::path(mesh_file_path).parent_path();
+  for (const io::MeshLabProjectMeshInfo& scan_info : mesh_infos) {
+    std::string file_path =
+        boost::filesystem::path(scan_info.filename).is_absolute() ?
+        scan_info.filename :
+        (scan_alignment_file_directory / scan_info.filename).string();
+
+    if(!AddMeshPLY(file_path, transformation * scan_info.global_T_mesh))
+      return false;
+  }
+
+  return true;
+}
+
+bool OcclusionGeometry::AddMeshPLY(const std::string& mesh_file_path, const Sophus::SE3f& transformation) {
   // Try to load the mesh.
   pcl::PolygonMesh polygon_mesh_cpu;
   if (pcl::io::loadPLYFile(mesh_file_path, polygon_mesh_cpu) < 0) {

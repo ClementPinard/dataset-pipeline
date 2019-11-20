@@ -190,10 +190,29 @@ TEST(Renderer, PixelAccuracy_Pinhole) {
                                        kCY);
   TestRendererPixelAccuracy(pinhole_camera);
 }
+
+TEST(Renderer, PixelAccuracy_SimplePinhole) {
+  camera::SimplePinholeCamera simple_pinhole_camera(kImageWidth, kImageHeight,
+                                                    kFX, kCX, kCY);
+  TestRendererPixelAccuracy(simple_pinhole_camera);
+}
+
 TEST(Renderer, PixelAccuracy_Polynomial) {
   camera::PolynomialCamera polynomial_camera(kImageWidth, kImageHeight, kFX,
                                              kFY, kCX, kCY, kK1, kK2, kK3);
   TestRendererPixelAccuracy(polynomial_camera);
+}
+
+TEST(Renderer, PixelAccuracy_Radial) {
+  camera::RadialCamera radial_camera(kImageWidth, kImageHeight, kFX,
+                                             kFY, kCX, kCY, kK1, -kK2);
+  TestRendererPixelAccuracy(radial_camera);
+}
+
+TEST(Renderer, PixelAccuracy_SimpleRadial) {
+  camera::SimpleRadialCamera simple_radial_camera(kImageWidth, kImageHeight,
+                                                  kFX, kCX, kCY, kK1);
+  TestRendererPixelAccuracy(simple_radial_camera);
 }
 
 TEST(Renderer, PixelAccuracy_FisheyeFOV) {

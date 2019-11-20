@@ -60,6 +60,8 @@ class OcclusionGeometry {
   // to add several meshes. Returns true if successful.
   bool AddMesh(const std::string& mesh_file_path);
   bool AddMesh(const std::string& mesh_file_path, const Sophus::SE3f& transformation);
+  bool AddMeshMeshLab(const std::string& mesh_file_path, const Sophus::SE3f& transformation);
+  bool AddMeshPLY(const std::string& mesh_file_path, const Sophus::SE3f& transformation);
   bool AddMesh(const pcl::PolygonMesh& mesh);
   
   cv::Mat_<float> RenderDepthMap(
