@@ -76,6 +76,8 @@ class OcclusionGeometry {
   struct EdgeWithFaces {
     std::size_t vertex_index1;
     std::size_t vertex_index2;
+    std::size_t vertex_index3;
+    std::size_t vertex_index4;
     std::size_t face_index1;
     std::size_t face_index2;
   };

@@ -48,4 +48,12 @@ bool LoadPointClouds(
     std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr>* colored_scans,
     io::MeshLabMeshInfoVector* scan_infos);
 
+bool LoadMeshes(
+    const std::string& scan_alignment_path,
+    std::vector<pcl::PolygonMesh::Ptr>* meshes);
+
+bool LoadMeshes(
+    const std::string& scan_alignment_path,
+    std::vector<pcl::PolygonMesh::Ptr>* meshes,
+    io::MeshLabMeshInfoVector* scan_infos);
 }  // namespace opt

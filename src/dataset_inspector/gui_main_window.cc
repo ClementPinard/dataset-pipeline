@@ -45,6 +45,7 @@
 #include <QPushButton>
 #include <QVariant>
 #include <QMimeData>
+#include <boost/filesystem.hpp>
 
 #include "dataset_inspector/draw_mask_tool.h"
 #include "dataset_inspector/gui_image_widget.h"
@@ -1182,6 +1183,15 @@ bool MainWindow::ReloadOcclusionGeometry(std::vector<pcl::PointCloud<pcl::PointX
     occlusion_geometry->SetSplatPoints(occlusion_point_cloud);
   } else {
     for (const std::string& mesh_file_path : occlusion_mesh_paths_) {
+      if(boost::filesystem::extension(mesh_file_path) == "mlp"){
+        std::vector<pcl::PolygonMesh::Ptr> meshes;
+        if (!opt::LoadMeshes(mesh_file_path, &meshes)) {
+          return EXIT_FAILURE;
+        }
+        for (const pcl::PolygonMesh::Ptr mesh : meshes){
+          occlusion_geometry->AddMesh(mesh_file_path);
+        }
+      }
       occlusion_geometry->AddMesh(mesh_file_path);
     }
   }

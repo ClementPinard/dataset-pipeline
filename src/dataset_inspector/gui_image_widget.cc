@@ -593,6 +593,7 @@ void ImageWidget::UpdateDepthMap(
     const opt::Image& image,
     int display_image_scale,
     bool mask_occlusion_boundaries) {
+  float point_radius = 0.03; // 3cm
   cv::Mat_<float> occlusion_image = problem_->occlusion_geometry().RenderDepthMap(
       intrinsics, image, display_image_scale, mask_occlusion_boundaries);
   
@@ -617,7 +618,20 @@ void ImageWidget::UpdateDepthMap(
           ix < image_scale_camera.width() && iy < image_scale_camera.height() &&
           occlusion_image(iy, ix) + opt::GlobalParameters().occlusion_depth_threshold >= image_point.z() &&
           (mask.empty() || mask(iy, ix) != opt::MaskType::kEvalObs)) {
-        temp_depth_map(iy, ix) = std::min(temp_depth_map(iy, ix), image_point.z());
+        Eigen::Vector3f dx, dy;
+        image_scale_camera.ProjectionToImageCoordinatesDerivative(image_point, &dx, &dy);
+        float splat_radius_x = dx.norm() * point_radius;
+        float splat_radius_y = dy.norm() * point_radius;
+        int min_x = std::max(0, int(ix - splat_radius_x + 0.5));
+        int min_y = std::max(0, int(iy - splat_radius_y + 0.5));
+        int end_x = std::min(image_scale_camera.width(), int(ix + splat_radius_x + 1.5));
+        int end_y = std::min(image_scale_camera.height(), int(iy + splat_radius_y + 1.5));
+        for (int y = min_y; y < end_y; ++ y) {
+          for (int x = min_x; x < end_x; ++ x) {
+            if(occlusion_image(y, x) + opt::GlobalParameters().occlusion_depth_threshold >= image_point.z())
+            temp_depth_map(y, x) = std::min(temp_depth_map(y, x), image_point.z());
+          }
+        }
         min_depth = std::min(min_depth, image_point.z());
         max_depth = std::max(max_depth, image_point.z());
       }

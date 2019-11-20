@@ -82,7 +82,7 @@ class SimpleRadialCamera : public CameraBase {
       return Eigen::Vector2f(99 * normalized_point.x(), 99 * normalized_point.y());
     }
     const float factw =
-        1.0f + r2 * k_;
+        1.0f + r2 * k1_;
     return Eigen::Vector2f(factw * normalized_point.x(), factw * normalized_point.y());
   }
 
@@ -173,9 +173,9 @@ class SimpleRadialCamera : public CameraBase {
     float r2 = r * r;
     constexpr int kMaxIterations = 50;
     float residual_non_squared =
-        r_d - (r * (1.0f + r2 * k_));
+        r_d - (r * (1.0f + r2 * k1_));
     for (int j = 0; j < kMaxIterations; ++j) {
-      float jac = 1.0f + r2 * (3.0f * k_);
+      float jac = 1.0f + r2 * (3.0f * k1_);
       float delta = residual_non_squared / jac;
       float r_next = r + delta;
       float r2_next = r_next * r_next;
@@ -183,7 +183,7 @@ class SimpleRadialCamera : public CameraBase {
       float residual_non_squared_next =
           r_d -
           (r_next *
-           (1.0f + r2_next * k_));
+           (1.0f + r2_next * k1_));
       if (residual_non_squared_next * residual_non_squared_next <
           residual_non_squared * residual_non_squared) {
         r = r_next;
@@ -339,11 +339,15 @@ class SimpleRadialCamera : public CameraBase {
     const float nxs = nx * nx;
     const float nys = ny * ny;
     const float ru2 = nxs + nys;
+    const float k = k1_;
+    const float r2_cutoff = radius_cutoff_squared_;
 
-    const float ddx_dnx = k_ * (ru2 + 2 * nxs) + 1;
-    const float ddx_dny = 2 * nx * ny * k_;
+    if(ru2 > r2_cutoff)
+      return Eigen::Vector4f(0, 0, 0, 0);
+    const float ddx_dnx = k * (ru2 + 2 * nxs) + 1;
+    const float ddx_dny = 2 * nx * ny * k;
     const float ddy_dnx = ddx_dny;
-    const float ddy_dny = k_ * (ru2 + 2 * nys) + 1;
+    const float ddy_dny = k * (ru2 + 2 * nys) + 1;
 
     return Eigen::Vector4f(ddx_dnx, ddx_dny, ddy_dnx, ddy_dny);
   }
@@ -352,18 +356,18 @@ class SimpleRadialCamera : public CameraBase {
     parameters[0] = fx();
     parameters[1] = cx();
     parameters[2] = cy();
-    parameters[3] = k_;
+    parameters[3] = k1_;
   }
 
-  // Returns the distortion parameters p1, p2, and p3.
+  // Returns the distortion parameters k and r_cutoff.
   inline Eigen::Vector2f distortion_parameters() const {
-    return Eigen::Vector2f(k_, radius_cutoff_squared_);
+    return Eigen::Vector2f(k1_, radius_cutoff_squared_);
   }
 
  private:
   
-  // The distortion parameter k.
-  float k_, radius_cutoff_squared_;
+  // The distortion parameter k. and r_cutoff
+  float k1_, radius_cutoff_squared_;
 
   Eigen::Vector2f* undistortion_lookup_;
 };

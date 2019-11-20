@@ -232,20 +232,26 @@ void OcclusionGeometry::MaskOutOcclusionBoundaries(
       (*output)(y, x) = input(y, x);
     }
   }
-  
-  // Find all edges for which one adjacent face points towards the camera, and
-  // the other one away from it.
+
+  // Method without normals:
+  // Find edges for which one adjacent surface goes above the plane made by edge and edge to image vectors,
+  // the other below
+
   for (const std::shared_ptr<EdgesWithFaceNormalsMesh>& edges_with_face_normals : edge_meshes_) {
     const std::vector<EdgeWithFaces>& edges_with_faces = edges_with_face_normals->edges_with_faces;
     const pcl::PointCloud<pcl::PointXYZ>& vertices = *edges_with_face_normals->vertices;
-    const Eigen::Matrix<float, 3, Eigen::Dynamic>& face_normals = edges_with_face_normals->face_normals;
     
     for (std::size_t i = 0, size = edges_with_faces.size(); i < size; ++ i) {
       const EdgeWithFaces& edge = edges_with_faces[i];
       Eigen::Vector3f edge_to_image = image_position - vertices.at(edge.vertex_index1).getVector3fMap();
-      bool face1 = face_normals.col(edge.face_index1).dot(edge_to_image) > 0;
-      bool face2 = face_normals.col(edge.face_index2).dot(edge_to_image) > 0;
-      if (face1 != face2) {
+      Eigen::Vector3f edge_vector = vertices.at(edge.vertex_index1).getVector3fMap() - vertices.at(edge.vertex_index2).getVector3fMap();
+      Eigen::Vector3f tangent1 = vertices.at(edge.vertex_index1).getVector3fMap() - vertices.at(edge.vertex_index3).getVector3fMap();
+      Eigen::Vector3f tangent2 = vertices.at(edge.vertex_index1).getVector3fMap() - vertices.at(edge.vertex_index4).getVector3fMap();
+      Eigen::Vector3f plane_normal = edge_to_image.cross(edge_vector);
+
+      float face1 = plane_normal.dot(tangent1);
+      float face2 = plane_normal.dot(tangent2);
+      if (face1 * face2 >= 0) {
         // The edge is at an occlusion boundary. Draw splats along the edge if
         // it is visible.
         DrawSplatsAtEdgeIfVisible(splat_radius,
@@ -402,7 +408,7 @@ cv::Mat_<float> OcclusionGeometry::_RenderDepthMapWithSplatsCPU(
 void OcclusionGeometry::AddHalfEdge(
     uint32_t vertex1,
     uint32_t vertex2,
-    uint32_t face_index,
+    uint32_t vertex3,
     std::unordered_map<IndexPair, std::size_t>* half_edge_map,
     std::vector<EdgeWithFaces>* edges_with_faces) {
   if (vertex1 > vertex2) {
@@ -414,16 +420,16 @@ void OcclusionGeometry::AddHalfEdge(
   if (it == half_edge_map->end()) {
     // The other face of this edge either does not exist or was not found yet.
     // Add the edge to the half edge map.
-    half_edge_map->insert(std::make_pair(key, face_index));
+    half_edge_map->insert(std::make_pair(key, vertex3));
   } else {
     // The other face of this edge is already in the map. Output the edge with
     // normals.
-    uint32_t other_face_index = it->second;
+    uint32_t other_vertex_index = it->second;
     EdgeWithFaces new_edge;
     new_edge.vertex_index1 = vertex1;
     new_edge.vertex_index2 = vertex2;
-    new_edge.face_index1 = face_index;
-    new_edge.face_index2 = other_face_index;
+    new_edge.vertex_index3 = vertex3;
+    new_edge.vertex_index4 = other_vertex_index;
     edges_with_faces->push_back(new_edge);
     
     // It is not necessary to remove the half edge, but it is much faster than
@@ -460,9 +466,9 @@ void OcclusionGeometry::ComputeEdgeNormalsList(
     output->face_normals.col(face_index) = a.cross(b).normalized();
     
     // Add the face's half edges.
-    AddHalfEdge(face_indices[0], face_indices[1], face_index, &half_edge_map, &output->edges_with_faces);
-    AddHalfEdge(face_indices[1], face_indices[2], face_index, &half_edge_map, &output->edges_with_faces);
-    AddHalfEdge(face_indices[2], face_indices[0], face_index, &half_edge_map, &output->edges_with_faces);
+    AddHalfEdge(face_indices[0], face_indices[1], face_indices[2], &half_edge_map, &output->edges_with_faces);
+    AddHalfEdge(face_indices[1], face_indices[2], face_indices[0], &half_edge_map, &output->edges_with_faces);
+    AddHalfEdge(face_indices[2], face_indices[0], face_indices[1], &half_edge_map, &output->edges_with_faces);
   }
 }
 

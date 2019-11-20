@@ -345,7 +345,7 @@ RendererProgram<camera::SimpleRadialCamera>::GetShaderDistortionCode() const {
   return "float r = (localPoint.x * localPoint.x + localPoint.y"
          "               * localPoint.y) / (localPoint.z * localPoint.z);\n"
          "if(r > radius_cutoff){"
-         " r = 99"
+         " r = 99.0;"
          "}else{"
          "r = 1.0 + r * k;"
          " }\n"

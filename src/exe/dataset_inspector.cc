@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
   // Initialize logging.
   FLAGS_logtostderr = 1;
   google::InitGoogleLogging(argv[0]);
-  pcl::console::setVerbosityLevel(pcl::console::L_ALWAYS);
+  pcl::console::setVerbosityLevel(pcl::console::L_VERBOSE);
   
   // Parse arguments.
   std::string scan_alignment_path;
@@ -78,7 +78,6 @@ int main(int argc, char** argv) {
   
   // Verify arguments.
   if (scan_alignment_path.empty() ||
-      occlusion_mesh_paths.empty() ||
       multi_res_point_cloud_directory_path.empty() ||
       image_base_path.empty() ||
       state_path.empty()) {
