@@ -31,6 +31,7 @@
 
 // Includes all camera models.
 #include "camera/camera_base.h"
+#include "camera_base_impl.h"
 #include "camera/camera_benchmark.h"
 #include "camera/camera_fisheye_fov.h"
 #include "camera/camera_fisheye_polynomial_4.h"

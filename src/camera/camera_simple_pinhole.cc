@@ -34,23 +34,8 @@
 namespace camera {
 SimplePinholeCamera::SimplePinholeCamera(int width, int height, float f,
                                          float cx, float cy)
-    : CameraBase(width, height, f, f, cx, cy, Type::kSimplePinhole) {}
+    : CameraBaseImpl(width, height, f, f, cx, cy, Type::kSimplePinhole) {}
 
 SimplePinholeCamera::SimplePinholeCamera(int width, int height, const float* parameters)
-    : CameraBase(width, height, parameters[0], parameters[0], parameters[1], parameters[2], Type::kSimplePinhole) {}
-
-CameraBase* SimplePinholeCamera::ScaledBy(float factor) const {
-  CHECK_NE(factor, 0.0f);
-  int scaled_width = static_cast<int>(factor * width_);
-  int scaled_height = static_cast<int>(factor * height_);
-  return new SimplePinholeCamera(scaled_width, scaled_height,
-                                 factor * fx(),
-                                 factor * (cx() + 0.5f) - 0.5f,
-                                 factor * (cy() + 0.5f) - 0.5f);
-}
-
-CameraBase* SimplePinholeCamera::ShiftedBy(float cx_offset, float cy_offset) const {
-  return new SimplePinholeCamera(width_, height_, fx(), cx() + cx_offset,
-                           cy() + cy_offset);
-}
+    : CameraBaseImpl(width, height, parameters[0], parameters[0], parameters[1], parameters[2], Type::kSimplePinhole) {}
 }  // namespace camera

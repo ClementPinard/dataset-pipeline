@@ -181,7 +181,7 @@ const GLchar* RendererProgram<
          "uniform float k2;\n"
          "uniform float k3;\n"
          "uniform float k4;\n"
-         "uniform float radius_cutoff;\n";
+         "uniform float radius_cutoff_squared;\n";
 }
 
 const GLchar*
@@ -190,7 +190,7 @@ RendererProgram<camera::FisheyePolynomial4Camera>::GetShaderDistortionCode() con
   return "float nx = localPoint.x / localPoint.z;\n"
          "float ny = localPoint.y / localPoint.z;\n"
          "float r = sqrt(nx * nx + ny * ny);\n"
-         "if (r <= radius_cutoff) {\n"
+         "if (r <= radius_cutoff_squared) {\n"
          "  if (r > 1e-6) {\n"
          "    float theta_by_r = atan(r, 1.0) / r;\n"
          "    nx = theta_by_r * nx;\n"
@@ -214,7 +214,7 @@ void RendererProgram<camera::FisheyePolynomial4Camera>::GetUniformLocations(
   u_k2_location_ = shader_program.GetUniformLocationOrAbort("k2");
   u_k3_location_ = shader_program.GetUniformLocationOrAbort("k3");
   u_k4_location_ = shader_program.GetUniformLocationOrAbort("k4");
-  radius_cutoff_location_ = shader_program.GetUniformLocationOrAbort("radius_cutoff");
+  radius_cutoff_squared_location_ = shader_program.GetUniformLocationOrAbort("radius_cutoff_squared");
 }
 
 void RendererProgram<camera::FisheyePolynomial4Camera>::SetUniformValues(
@@ -223,7 +223,7 @@ void RendererProgram<camera::FisheyePolynomial4Camera>::SetUniformValues(
   glUniform1f(u_k2_location_, camera.distortion_parameters()[1]);
   glUniform1f(u_k3_location_, camera.distortion_parameters()[2]);
   glUniform1f(u_k4_location_, camera.distortion_parameters()[3]);
-  glUniform1f(radius_cutoff_location_, camera.radius_cutoff());
+  glUniform1f(radius_cutoff_squared_location_, camera.radius_cutoff_squared());
 }
 
 
@@ -336,7 +336,7 @@ void RendererProgram<camera::RadialCamera>::SetUniformValues(
 const GLchar* RendererProgram<
     camera::SimpleRadialCamera>::GetShaderUniformDefinitions() const {
   return "uniform float k;\n"
-         "uniform float radius_cutoff;\n";
+         "uniform float radius_cutoff_squared;\n";
 }
 
 const GLchar*
@@ -344,7 +344,7 @@ RendererProgram<camera::SimpleRadialCamera>::GetShaderDistortionCode() const {
   // (Mis)using localPoint.w for intermediate results.
   return "float r = (localPoint.x * localPoint.x + localPoint.y"
          "               * localPoint.y) / (localPoint.z * localPoint.z);\n"
-         "if(r > radius_cutoff){"
+         "if(r > radius_cutoff_squared){"
          " r = 99.0;"
          "}else{"
          "r = 1.0 + r * k;"
@@ -356,7 +356,7 @@ RendererProgram<camera::SimpleRadialCamera>::GetShaderDistortionCode() const {
 void RendererProgram<camera::SimpleRadialCamera>::GetUniformLocations(
     const ShaderProgramOpenGL& shader_program) {
   u_k_location_ = shader_program.GetUniformLocationOrAbort("k");
-  u_radius_location_ = shader_program.GetUniformLocationOrAbort("radius_cutoff");
+  u_radius_location_ = shader_program.GetUniformLocationOrAbort("radius_cutoff_squared");
 }
 
 void RendererProgram<camera::SimpleRadialCamera>::SetUniformValues(
@@ -464,7 +464,7 @@ const GLchar* RendererProgram<
          "uniform float k4;\n"
          "uniform float sx1;\n"
          "uniform float sy1;\n"
-         "uniform float radius_cutoff;\n";
+         "uniform float radius_cutoff_squared;\n";
 }
 
 const GLchar*
@@ -502,7 +502,7 @@ void RendererProgram<camera::BenchmarkCamera>::GetUniformLocations(
   u_k4_location_ = shader_program.GetUniformLocationOrAbort("k4");
   u_sx1_location_ = shader_program.GetUniformLocationOrAbort("sx1");
   u_sy1_location_ = shader_program.GetUniformLocationOrAbort("sy1");
-  radius_cutoff_location_ = shader_program.GetUniformLocationOrAbort("radius_cutoff");
+  radius_cutoff_squared_location_ = shader_program.GetUniformLocationOrAbort("radius_cutoff");
 }
 
 void RendererProgram<camera::BenchmarkCamera>::SetUniformValues(
@@ -515,7 +515,7 @@ void RendererProgram<camera::BenchmarkCamera>::SetUniformValues(
   glUniform1f(u_k4_location_, camera.distortion_parameters()[5]);
   glUniform1f(u_sx1_location_, camera.distortion_parameters()[6]);
   glUniform1f(u_sy1_location_, camera.distortion_parameters()[7]);
-  glUniform1f(radius_cutoff_location_, camera.radius_cutoff());
+  glUniform1f(radius_cutoff_squared_location_, camera.radius_cutoff_squared());
 }
 
 

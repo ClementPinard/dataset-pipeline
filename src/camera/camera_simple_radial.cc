@@ -34,51 +34,17 @@
 namespace camera {
 SimpleRadialCamera::SimpleRadialCamera(int width, int height, float f,
                                    float cx, float cy, float k)
-    : CameraBase(width, height, f, f, cx, cy, Type::kSimpleRadial),
+    : CameraBaseImpl(width, height, f, f, cx, cy, Type::kSimpleRadial),
       k1_(k) {
   InitCutoff();
-  InitializeUnprojectionLookup();
 }
 
 SimpleRadialCamera::SimpleRadialCamera(int width, int height,
                                    const float* parameters)
-    : CameraBase(width, height, parameters[0], parameters[0], parameters[1],
+    : CameraBaseImpl(width, height, parameters[0], parameters[0], parameters[1],
                  parameters[2], Type::kSimpleRadial),
       k1_(parameters[3]) {
   InitCutoff();
-  InitializeUnprojectionLookup();
-}
-
-SimpleRadialCamera::~SimpleRadialCamera() {
-  delete[] undistortion_lookup_;
-}
-
-CameraBase* SimpleRadialCamera::ScaledBy(float factor) const {
-  CHECK_NE(factor, 0.0f);
-  int scaled_width = static_cast<int>(factor * width_);
-  int scaled_height = static_cast<int>(factor * height_);
-  return new SimpleRadialCamera(scaled_width, scaled_height, factor * fx(),
-      factor * (cx() + 0.5f) - 0.5f,
-      factor * (cy() + 0.5f) - 0.5f, k1_);
-}
-
-CameraBase* SimpleRadialCamera::ShiftedBy(float cx_offset,
-                                        float cy_offset) const {
-  return new SimpleRadialCamera(width_, height_, fx(), cx() + cx_offset,
-                              cy() + cy_offset, k1_);
-}
-
-void SimpleRadialCamera::InitializeUnprojectionLookup() {
-  // Compute undistortion lookup.
-  undistortion_lookup_ = new Eigen::Vector2f[height() * width()];
-  Eigen::Vector2f* ptr = undistortion_lookup_;
-  for (int y = 0; y < height(); ++y) {
-    for (int x = 0; x < width(); ++x) {
-      *ptr = Undistort(
-          Eigen::Vector2f(fx_inv() * x + cx_inv(), fy_inv() * y + cy_inv()));
-      ++ptr;
-    }
-  }
 }
 
 void SimpleRadialCamera::InitCutoff() {

@@ -104,7 +104,7 @@ class RendererProgram<camera::FisheyePolynomial4Camera> : public RendererProgram
   GLint u_k2_location_;
   GLint u_k3_location_;
   GLint u_k4_location_;
-  GLint radius_cutoff_location_;
+  GLint radius_cutoff_squared_location_;
 };
 
 template <>
@@ -213,7 +213,7 @@ class RendererProgram<camera::BenchmarkCamera> : public RendererProgramBase {
   GLint u_k4_location_;
   GLint u_sx1_location_;
   GLint u_sy1_location_;
-  GLint radius_cutoff_location_;
+  GLint radius_cutoff_squared_location_;
 };
 
 

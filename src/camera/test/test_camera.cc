@@ -101,7 +101,7 @@ void UndistortAndDistortImageCornersTest(const Camera& test_camera) {
 template <typename Camera>
 void DistortAndUndistortTest(const Camera& test_camera) {
   const std::vector<Eigen::Vector2f, Eigen::aligned_allocator<Eigen::Vector2f>> kTestPoints = {
-      Eigen::Vector2f(0.0f, 0.0f), // Eigen::Vector2f(1.0f, 1.0f), // This was outside the cutoff radius for some cameras, resulting in errors.
+      Eigen::Vector2f(0.0f, 0.0f), Eigen::Vector2f(1.0f, 1.0f),
       Eigen::Vector2f(0.0f, 1.0f), Eigen::Vector2f(1.0f, 0.0f),
       Eigen::Vector2f(0.5f, 0.5f), Eigen::Vector2f(0.1f, 0.2f),
       Eigen::Vector2f(0.8f, 0.9f), Eigen::Vector2f(0.5f, 0.6f),
@@ -409,7 +409,7 @@ constexpr double kCY = 239.5;
 
 constexpr float kOmega = 1.0f;
 
-constexpr float kK1 = 0.23f;
+constexpr float kK1 = 0.13f;
 constexpr float kK2 = -0.66f;
 constexpr float kK3 = 0.64f;
 
