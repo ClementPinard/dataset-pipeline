@@ -49,10 +49,8 @@ SimpleRadialCamera::SimpleRadialCamera(int width, int height,
 
 void SimpleRadialCamera::InitCutoff() {
   // get the radius where the derivative of distorted r wrt r is 0
-  if(k1_ > 0){
-    radius_cutoff_squared_ = std::numeric_limits<float>::infinity();
-  }else{
-    radius_cutoff_squared_= -1./(3 * k1_);
+  if(k1_ < 0){
+    radius_cutoff_squared_= -1.f/(3 * k1_);
   }
 }
 

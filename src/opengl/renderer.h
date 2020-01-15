@@ -179,6 +179,26 @@ class RendererProgram<camera::PolynomialTangentialCamera> : public RendererProgr
 };
 
 template <>
+class RendererProgram<camera::FullOpenCVCamera> : public RendererProgramBase {
+ public:
+  const GLchar* GetShaderUniformDefinitions() const override;
+  const GLchar* GetShaderDistortionCode() const override;
+  void GetUniformLocations(const ShaderProgramOpenGL& shader_program) override;
+  void SetUniformValues(const camera::FullOpenCVCamera& camera) const;
+
+ private:
+  GLint u_k1_location_;
+  GLint u_k2_location_;
+  GLint u_p1_location_;
+  GLint u_p2_location_;
+  GLint u_k3_location_;
+  GLint u_k4_location_;
+  GLint u_k5_location_;
+  GLint u_k6_location_;
+  GLint radius_cutoff_squared_location_;
+};
+
+template <>
 class RendererProgram<camera::PinholeCamera> : public RendererProgramBase {
  public:
   const GLchar* GetShaderUniformDefinitions() const override;

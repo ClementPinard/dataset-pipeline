@@ -99,10 +99,8 @@ class FisheyePolynomial4Camera : public CameraBaseImpl<FisheyePolynomial4Camera>
   // intrinsics. For x and y, 8 values each are returned for fx, fy, cx, cy,
   // k1, k2, k3, k4.
   template <typename Derived>
-  inline void ProjectionToImageCoordinatesDerivativeByIntrinsics(
-      const Eigen::MatrixBase<Derived>& point, float* deriv_x, float* deriv_y) const {
-    const Eigen::Vector2f normalized_point =
-        Eigen::Vector2f(point.x() / point.z(), point.y() / point.z());
+  inline void NormalizedDerivativeByIntrinsics(
+      const Eigen::MatrixBase<Derived>& normalized_point, float* deriv_x, float* deriv_y) const {
     
     const Eigen::Vector2f distorted_point = Distort(normalized_point);
     deriv_x[0] = distorted_point.x();
@@ -120,13 +118,6 @@ class FisheyePolynomial4Camera : public CameraBaseImpl<FisheyePolynomial4Camera>
     const float fy_ny = fy() * normalized_point.y();
     const float r2 = nx2 + ny2;
     const float r = sqrtf(r2);
-    if (r > radius_cutoff_squared_) {
-      for (int i = 0; i < 12; ++ i) {
-        deriv_x[i] = 0;
-        deriv_y[i] = 0;
-      }
-      return;
-    }
     if (r > kEpsilon) {
       const float atan_r = atanf(r);
       const float atan_r_2 = atan_r * atan_r;
@@ -169,7 +160,7 @@ class FisheyePolynomial4Camera : public CameraBaseImpl<FisheyePolynomial4Camera>
     const float ny2 = ny * ny;
     const float r2 = nx2 + ny2;
     const float r = sqrtf(r2);
-    if (r > radius_cutoff_squared_) {
+    if (r2 > radius_cutoff_squared_) {
       return Eigen::Vector4f(0, 0, 0, 0);
     }
     if (r > kEpsilon) {

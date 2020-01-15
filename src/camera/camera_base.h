@@ -69,6 +69,7 @@ class CameraBase {
     kFOV = 0,
     kPolynomial = 1,
     kPolynomialTangential = 2,
+    kFullOpenCV = 10,
     kFisheyePolynomial4 = 6,
     kFisheyePolynomialTangential = 3,
     kPinhole = 4,
@@ -247,6 +248,12 @@ CameraBase::Type StringToType(const std::string& type);
           static_cast<const _##object##_type&>(object);                   \
       (void)_##object;                                                    \
       (__VA_ARGS__);                                                      \
+    } else if (object.type() == camera::CameraBase::Type::kFullOpenCV) { \
+      typedef camera::FullOpenCVCamera _##object##_type;        \
+      const _##object##_type& _##object =                                 \
+          static_cast<const _##object##_type&>(object);                   \
+      (void)_##object;                                                    \
+      (__VA_ARGS__);                                                      \
     } else if (object.type() == camera::CameraBase::Type::kPinhole) {     \
       typedef camera::PinholeCamera _##object##_type;                     \
       const _##object##_type& _##object =                                 \
@@ -302,6 +309,9 @@ CameraBase::Type StringToType(const std::string& type);
       (__VA_ARGS__);                                                      \
     } else if (camera_type == camera::CameraBase::Type::kPolynomialTangential) { \
       typedef camera::PolynomialTangentialCamera _##camera_type;          \
+      (__VA_ARGS__);                                                      \
+    } else if (camera_type == camera::CameraBase::Type::kFullOpenCV) { \
+      typedef camera::FullOpenCVCamera _##camera_type;          \
       (__VA_ARGS__);                                                      \
     } else if (camera_type == camera::CameraBase::Type::kPinhole) {       \
       typedef camera::PinholeCamera _##camera_type;                       \

@@ -412,6 +412,68 @@ void RendererProgram<camera::PolynomialTangentialCamera>::SetUniformValues(
   glUniform1f(radius_cutoff_squared_location_, camera.radius_cutoff_squared());
 }
 
+const GLchar* RendererProgram<
+    camera::FullOpenCVCamera>::GetShaderUniformDefinitions() const {
+  return "uniform float k1;\n"
+         "uniform float k2;\n"
+         "uniform float k3;\n"
+         "uniform float k4;\n"
+         "uniform float k5;\n"
+         "uniform float k6;\n"
+         "uniform float p1;\n"
+         "uniform float p2;\n"
+         "uniform float radius_cutoff_squared;\n";
+}
+
+const GLchar*
+RendererProgram<camera::FullOpenCVCamera>::GetShaderDistortionCode() const {
+  // (Mis)using localPoint.w for intermediate results.
+  return "float nx = localPoint.x / localPoint.z;\n"
+         "float ny = localPoint.y / localPoint.z;\n"
+         "float x2 = nx * nx;\n"
+         "float xy = nx * ny;\n"
+         "float y2 = ny * ny;\n"
+         "float r2 = x2 + y2;\n"
+         "float r4 = r2 * r2;\n"
+         "float r6 = r4 * r2;\n"
+         "if (r2 <= radius_cutoff_squared) {\n"
+         "  localPoint.w = (1.0 + r2 * k1 + r4 * k2 + r6 * k3) / (1.0 + r2 * k4 + r4 * k5 + r6 * k6);\n"
+         "  localPoint.x = localPoint.z * (nx + localPoint.w * nx + 2.0 * p1 * xy + p2 * (r2 + 2.0 * x2));\n"
+         "  localPoint.y = localPoint.z * (ny + localPoint.w * ny + 2.0 * p2 * xy + p1 * (r2 + 2.0 * y2));\n"
+         "} else {\n"
+         "  localPoint.x = localPoint.x * 99.0;\n"
+         "  localPoint.y = localPoint.y * 99.0;\n"
+         "}\n";
+}
+
+void RendererProgram<camera::FullOpenCVCamera>::GetUniformLocations(
+    const ShaderProgramOpenGL& shader_program) {
+  u_k1_location_ = shader_program.GetUniformLocationOrAbort("k1");
+  u_k2_location_ = shader_program.GetUniformLocationOrAbort("k2");
+  u_k3_location_ = shader_program.GetUniformLocationOrAbort("k3");
+  u_k4_location_ = shader_program.GetUniformLocationOrAbort("k4");
+  u_k5_location_ = shader_program.GetUniformLocationOrAbort("k5");
+  u_k6_location_ = shader_program.GetUniformLocationOrAbort("k6");
+  u_p1_location_ = shader_program.GetUniformLocationOrAbort("p1");
+  u_p2_location_ = shader_program.GetUniformLocationOrAbort("p2");
+  radius_cutoff_squared_location_ = shader_program.GetUniformLocationOrAbort("radius_cutoff_squared");
+}
+
+void RendererProgram<camera::FullOpenCVCamera>::SetUniformValues(
+    const camera::FullOpenCVCamera& camera) const {
+  glUniform1f(u_k1_location_, camera.distortion_parameters()[0]);
+  glUniform1f(u_k2_location_, camera.distortion_parameters()[1]);
+  glUniform1f(u_p1_location_, camera.distortion_parameters()[2]);
+  glUniform1f(u_p2_location_, camera.distortion_parameters()[3]);
+  glUniform1f(u_k3_location_, camera.distortion_parameters()[4]);
+  glUniform1f(u_k4_location_, camera.distortion_parameters()[5]);
+  glUniform1f(u_k5_location_, camera.distortion_parameters()[6]);
+  glUniform1f(u_k6_location_, camera.distortion_parameters()[7]);
+  glUniform1f(radius_cutoff_squared_location_, camera.radius_cutoff_squared());
+}
+
+
+
 
 const GLchar*
 RendererProgram<camera::PinholeCamera>::GetShaderUniformDefinitions() const {

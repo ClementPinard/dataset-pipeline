@@ -98,6 +98,7 @@ add_library(BaseLib
   src/camera/camera_radial.cc
   src/camera/camera_simple_radial.cc
   src/camera/camera_polynomial_tangential.cc
+  src/camera/camera_full_opencv.cc
   
   src/icp/icp_point_to_plane.cc
   

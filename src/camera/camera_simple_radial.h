@@ -75,15 +75,11 @@ class SimpleRadialCamera : public CameraBaseImpl<SimpleRadialCamera> {
   // Returns the derivatives of the image coordinates with respect to the
   // intrinsics. For x and y, 4 values each are returned for f, cx, cy, k.
   template <typename Derived>
-  inline void ProjectionToImageCoordinatesDerivativeByIntrinsics(
-      const Eigen::MatrixBase<Derived>& point, float* deriv_x, float* deriv_y) const {
-    const Eigen::Vector2f normalized_point =
-        Eigen::Vector2f(point.x() / point.z(), point.y() / point.z());
+  inline void NormalizedDerivativeByIntrinsics(
+      const Eigen::MatrixBase<Derived>& normalized_point, float* deriv_x, float* deriv_y) const {
     const Eigen::Vector2f distorted_point = Distort(normalized_point);
     
-    const float radius_square =
-        normalized_point.x() * normalized_point.x() +
-        normalized_point.y() * normalized_point.y();
+    const float radius_square = normalized_point.squaredNorm();
     
     deriv_x[0] = distorted_point.x();
     deriv_x[1] = 1.f;

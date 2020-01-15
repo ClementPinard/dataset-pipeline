@@ -75,15 +75,14 @@ class PinholeCamera : public CameraBaseImpl<PinholeCamera> {
   // Returns the derivatives of the image coordinates with respect to the
   // intrinsics. For x and y, 4 values each are returned for fx, fy, cx, cy.
   template <typename Derived>
-  inline void ProjectionToImageCoordinatesDerivativeByIntrinsics(
-      const Eigen::MatrixBase<Derived>& point, float* deriv_x, float* deriv_y) const {
-    const Eigen::Vector2f distorted_point = Distort(Eigen::Vector2f(point.x() / point.z(), point.y() / point.z()));
-    deriv_x[0] = distorted_point.x();
+  inline void NormalizedDerivativeByIntrinsics(
+      const Eigen::MatrixBase<Derived>& normalized_point, float* deriv_x, float* deriv_y) const {
+    deriv_x[0] = normalized_point.x();
     deriv_x[1] = 0.f;
     deriv_x[2] = 1.f;
     deriv_x[3] = 0.f;
     deriv_y[0] = 0.f;
-    deriv_y[1] = distorted_point.y();
+    deriv_y[1] = normalized_point.y();
     deriv_y[2] = 0.f;
     deriv_y[3] = 1.f;
   }

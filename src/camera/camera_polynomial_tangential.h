@@ -79,10 +79,8 @@ class PolynomialTangentialCamera : public CameraBaseImpl<PolynomialTangentialCam
   // intrinsics. For x and y, 8 values each are returned for fx, fy, cx, cy,
   // k1, k2, p1, p2.
   template <typename Derived>
-  inline void ProjectionToImageCoordinatesDerivativeByIntrinsics(
-      const Eigen::MatrixBase<Derived>& point, float* deriv_x, float* deriv_y) const {
-    const Eigen::Vector2f normalized_point =
-        Eigen::Vector2f(point.x() / point.z(), point.y() / point.z());
+  inline void NormalizedDerivativeByIntrinsics(
+      const Eigen::MatrixBase<Derived>& normalized_point, float* deriv_x, float* deriv_y) const {
     const Eigen::Vector2f distorted_point = Distort(normalized_point);
     
     const float nx2 = normalized_point.x() * normalized_point.x();
@@ -91,14 +89,6 @@ class PolynomialTangentialCamera : public CameraBaseImpl<PolynomialTangentialCam
     const float r2 = nx2 + ny2;
     const float fx_nx = fx() * normalized_point.x();
     const float fy_ny = fy() * normalized_point.y();
-    
-    if (r2 > radius_cutoff_squared_) {
-      for (int i = 0; i < 8; ++ i) {
-        deriv_x[i] = 0;
-        deriv_y[i] = 0;
-      }
-      return;
-    }
     
     deriv_x[0] = distorted_point.x();
     deriv_x[1] = 0.f;
@@ -152,10 +142,6 @@ class PolynomialTangentialCamera : public CameraBaseImpl<PolynomialTangentialCam
     const float ny2 = ny * ny;
     const float ny3 = ny2 * ny;
     const float ny4 = ny3 * ny;
-    
-    if (nx2 + ny2 > radius_cutoff_squared_) {
-      return Eigen::Vector4f(0, 0, 0, 0);
-    }
     
     const float ddx_dnx = 5*k2*nx4 + 6*k2*nx2*ny2 + 3*k1*nx2 + 6*p2*nx + k2*ny4 + k1*ny2 + 2*p1*ny + 1;
     const float ddx_dny = 4*k2*nx3*ny + 4*k2*nx*ny3 + 2*k1*nx*ny + 2*p1*nx + 2*p2*ny;

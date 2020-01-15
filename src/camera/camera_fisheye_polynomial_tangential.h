@@ -95,10 +95,8 @@ class FisheyePolynomialTangentialCamera : public CameraBaseImpl<FisheyePolynomia
   // intrinsics. For x and y, 8 values each are returned for fx, fy, cx, cy,
   // k1, k2, p1, p2.
   template <typename Derived>
-  inline void ProjectionToImageCoordinatesDerivativeByIntrinsics(
-      const Eigen::MatrixBase<Derived>& point, float* deriv_x, float* deriv_y) const {
-    const Eigen::Vector2f normalized_point =
-        Eigen::Vector2f(point.x() / point.z(), point.y() / point.z());
+  inline void NormalizedDerivativeByIntrinsics(
+      const Eigen::MatrixBase<Derived>& normalized_point, float* deriv_x, float* deriv_y) const {
     
     const Eigen::Vector2f distorted_point = Distort(normalized_point);
     deriv_x[0] = distorted_point.x();

@@ -74,10 +74,8 @@ class FisheyeFOVCamera : public CameraBaseImpl<FisheyeFOVCamera> {
   // omega.
   // NOTE: This could probably be optimized by re-using terms from Distort().
   template <typename Derived>
-  inline void ProjectionToImageCoordinatesDerivativeByIntrinsics(
-      const Eigen::MatrixBase<Derived>& point, float* deriv_x, float* deriv_y) const {
-    const Eigen::Vector2f normalized_point =
-        Eigen::Vector2f(point.x() / point.z(), point.y() / point.z());
+  inline void NormalizedDerivativeByIntrinsics(
+      const Eigen::MatrixBase<Derived>& normalized_point, float* deriv_x, float* deriv_y) const {
     const Eigen::Vector2f distorted_point = Distort(normalized_point);
     
     // nx^2 + ny^2
