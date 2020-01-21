@@ -39,6 +39,7 @@
 namespace {
 template <typename Camera>
 void UndistortAndDistortImageCornersTest(const Camera& test_camera) {
+  constexpr bool kShowDebugImages = true;
   // Test the corners of the image.
   std::vector<Eigen::Vector2f, Eigen::aligned_allocator<Eigen::Vector2f>> test_points;
   test_points.push_back(Eigen::Vector2f(0, 0));
@@ -64,11 +65,11 @@ void UndistortAndDistortImageCornersTest(const Camera& test_camera) {
         << " (undistorted: " << test_camera.Undistort(nxy).x() << ", "
         << test_camera.Distort(nxy).y() << ")";
     
-    // In case of failure, show a debug image.
-    if (fabs(nxy.x() - result.x()) > 1e-5f ||
-        fabs(nxy.y() - result.y()) > 1e-5f) {
-      int failing_pixels = 0;
+    if (kShowDebugImages && (fabs(nxy.x() - result.x()) > 1e-5f ||
+                             fabs(nxy.y() - result.y()) > 1e-5f)) {
       cv::Mat_<cv::Vec3b> debug_image(test_camera.height(), test_camera.width(), cv::Vec3b(0,0,0));
+      // In case of failure, show a debug image.
+      int failing_pixels = 0;
       for (int test_y = 0; test_y < test_camera.height(); ++ test_y) {
         for (int test_x = 0; test_x < test_camera.width(); ++ test_x) {
           Eigen::Vector2f test_nxy = Eigen::Vector2f(test_camera.fx_inv() * test_x + test_camera.cx_inv(),
@@ -80,18 +81,31 @@ void UndistortAndDistortImageCornersTest(const Camera& test_camera) {
             ++ failing_pixels;
             debug_image(test_y, test_x) = cv::Vec3b(0, 0, 255);
           }
+        }
+      }
+      std::ostringstream window_title;
+      window_title << "Red shows where undistort(distort(x)) fails (" << failing_pixels << " pixels)";
+      cv::imshow(window_title.str(), debug_image);
+      cv::waitKey(0);
+    }
+
+    if (kShowDebugImages && i==0){
+      cv::Mat_<cv::Vec3b> debug_image(test_camera.height(), test_camera.width(), cv::Vec3b(0,0,0));
+      for (int test_y = -test_camera.height(); test_y <= 2*test_camera.height(); ++ test_y) {
+        for (int test_x = -test_camera.width(); test_x <= 2*test_camera.width(); ++ test_x) {
           if(test_x % 20 == 0 || test_y % 20 == 0){
+            Eigen::Vector2f test_nxy = Eigen::Vector2f(test_camera.fx_inv() * test_x + test_camera.cx_inv(),
+                                        test_camera.fy_inv() * test_y + test_camera.cy_inv());
             Eigen::Vector2f distorted = test_camera.Distort(test_nxy);
             int test_x2 = round(test_camera.fx() * distorted.x() + test_camera.cx());
             int test_y2 = round(test_camera.fy() * distorted.y() + test_camera.cy());
             if(test_x2 > 0 && test_y2 > 0 && test_x2 < test_camera.width()-1 && test_y2 < test_camera.height()-1)
               debug_image(test_y2, test_x2) = cv::Vec3b(255, 255, 255);
           }
-
         }
       }
       std::ostringstream window_title;
-      window_title << "Red shows where undistort(distort(x)) fails (" << failing_pixels << " pixels)";
+      window_title << "White grid shows distorted pixels, every 20 pixels";
       cv::imshow(window_title.str(), debug_image);
       cv::waitKey(0);
     }
@@ -275,7 +289,7 @@ void NumericalProjectionToImageCoordinatesDerivativeByIntrinsics(
     const float* delta,
     float* result_x, float* result_y) {
   constexpr int kNumParameters = Camera::ParameterCount();
-  const float kStep = 0.025f;
+  const float kStep = 0.01f;
   const float kTwoSteps = 2 * kStep;
   
   std::shared_ptr<Camera> plus, minus;
@@ -327,9 +341,9 @@ void TestProjectionToImageCoordinatesDerivativeByIntrinsics(
           camera, nx, ny, delta, &numerical_x, &numerical_y);
       delta[c] = 0;
       
-      EXPECT_NEAR(result_x[c], numerical_x, 1.5e-3f)
+      EXPECT_NEAR(result_x[c], numerical_x, 2.5e-3f)
           << "Failure for point " << i << ", component " << c;
-      EXPECT_NEAR(result_y[c], numerical_y, 1.5e-3f)
+      EXPECT_NEAR(result_y[c], numerical_y, 2.5e-3f)
           << "Failure for point " << i << ", component " << c;
     }
   }
@@ -454,6 +468,12 @@ TEST(Camera, PolynomialTangential) {
       kImageWidth, kImageHeight, 340.926, 341.124, 302.4, 201.6, -0.101082,
       0.0703954, 0.000438661, -0.000680887);
   RunCameraModelTests(polynomial_tangential_camera);
+}
+
+TEST(Camera, FullOpenCV) {
+  camera::FullOpenCVCamera follopencv_camera(kImageWidth, kImageHeight, 340.926, 341.124, 302.4, 201.6, -0.101082,
+      0.0703954, 0.0438661, -0.0680887, -0.00101082, .1, .001, -.001);
+  RunCameraModelTests(follopencv_camera);
 }
 
 TEST(Camera, FisheyePolynomial4) {

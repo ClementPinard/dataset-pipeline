@@ -57,21 +57,20 @@ class PolynomialTangentialCamera : public CameraBaseImpl<PolynomialTangentialCam
 
   template <typename Derived>
   inline Eigen::Vector2f Distort(const Eigen::MatrixBase<Derived>& normalized_point) const {
+    const float k1 = distortion_parameters_.x();
+    const float k2 = distortion_parameters_.y();
+    const float p1 = distortion_parameters_.z();
+    const float p2 = distortion_parameters_.w();
+
     const float x2 = normalized_point.x() * normalized_point.x();
     const float xy = normalized_point.x() * normalized_point.y();
     const float y2 = normalized_point.y() * normalized_point.y();
     const float r2 = x2 + y2;
+    const float radial =1 + r2 * (k1 + r2 * k2);
 
-    if (r2 > radius_cutoff_squared_) {
-      return Eigen::Vector2f(99 * normalized_point.x(), 99 * normalized_point.y());
-    }
-    const float radial =
-        r2 * (distortion_parameters_.x() + r2 * distortion_parameters_.y());
-    const float dx = 2.f * distortion_parameters_.z() * xy + distortion_parameters_.w() * (r2 + 2.f * x2);
-    const float dy = 2.f * distortion_parameters_.w() * xy + distortion_parameters_.z() * (r2 + 2.f * y2);
-    return Eigen::Vector2f(
-        normalized_point.x() + radial * normalized_point.x() + dx,
-        normalized_point.y() + radial * normalized_point.y() + dy);
+    const Eigen::Vector2f dx_dy(2.f * p1 * xy + p2 * (r2 + 2.f * x2),
+                                2.f * p2 * xy + p1 * (r2 + 2.f * y2));
+    return normalized_point * radial + dx_dy;
   }
   
   
@@ -130,12 +129,14 @@ class PolynomialTangentialCamera : public CameraBaseImpl<PolynomialTangentialCam
   // as an approximation.
   template <typename Derived>
   inline Eigen::Vector4f DistortionDerivative(const Eigen::MatrixBase<Derived>& normalized_point) const {
-    const float nx = normalized_point.x();
-    const float ny = normalized_point.y();
     const float k1 = distortion_parameters_.x();
     const float k2 = distortion_parameters_.y();
     const float p1 = distortion_parameters_.z();
     const float p2 = distortion_parameters_.w();
+
+    const float nx = normalized_point.x();
+    const float ny = normalized_point.y();
+
     const float nx2 = nx * nx;
     const float nx3 = nx2 * nx;
     const float nx4 = nx3 * nx;

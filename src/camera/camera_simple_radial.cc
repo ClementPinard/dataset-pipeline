@@ -37,18 +37,21 @@ SimpleRadialCamera::SimpleRadialCamera(int width, int height, float f,
     : CameraBaseImpl(width, height, f, f, cx, cy, Type::kSimpleRadial),
       k1_(k) {
   InitCutoff();
+  InitializeUnprojectionLookup();
 }
 
 SimpleRadialCamera::SimpleRadialCamera(int width, int height,
                                    const float* parameters)
     : CameraBaseImpl(width, height, parameters[0], parameters[0], parameters[1],
-                 parameters[2], Type::kSimpleRadial),
+                     parameters[2], Type::kSimpleRadial),
       k1_(parameters[3]) {
   InitCutoff();
+  InitializeUnprojectionLookup();
 }
 
 void SimpleRadialCamera::InitCutoff() {
   // get the radius where the derivative of distorted r wrt r is 0
+  // this means that the distorted point begins to go back to the center (unwanted)
   if(k1_ < 0){
     radius_cutoff_squared_= -1.f/(3 * k1_);
   }

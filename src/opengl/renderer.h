@@ -120,6 +120,7 @@ class RendererProgram<camera::FisheyePolynomialTangentialCamera> : public Render
   GLint u_k2_location_;
   GLint u_p1_location_;
   GLint u_p2_location_;
+  GLint radius_cutoff_squared_location_;
 };
 
 template <>
@@ -131,9 +132,10 @@ class RendererProgram<camera::PolynomialCamera> : public RendererProgramBase {
   void SetUniformValues(const camera::PolynomialCamera& camera) const;
 
  private:
-  GLint u_p0_location_;
-  GLint u_p1_location_;
-  GLint u_p2_location_;
+  GLint u_k1_location_;
+  GLint u_k2_location_;
+  GLint u_k3_location_;
+  GLint radius_cutoff_squared_location_;
 };
 
 template <>
@@ -145,8 +147,9 @@ class RendererProgram<camera::RadialCamera> : public RendererProgramBase {
   void SetUniformValues(const camera::RadialCamera& camera) const;
 
  private:
-  GLint u_p0_location_;
-  GLint u_p1_location_;
+  GLint u_k1_location_;
+  GLint u_k2_location_;
+  GLint radius_cutoff_squared_location_;
 };
 
 template <>
@@ -159,7 +162,7 @@ class RendererProgram<camera::SimpleRadialCamera> : public RendererProgramBase {
 
  private:
   GLint u_k_location_;
-  GLint u_radius_location_;
+  GLint radius_cutoff_squared_location_;
 };
 
 template <>

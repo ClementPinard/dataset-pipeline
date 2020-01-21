@@ -70,8 +70,6 @@ class PinholeCamera : public CameraBaseImpl<PinholeCamera> {
     return normalized_point;
   }
 
-  void InitializeUnprojectionLookup() {}
-
   // Returns the derivatives of the image coordinates with respect to the
   // intrinsics. For x and y, 4 values each are returned for fx, fy, cx, cy.
   template <typename Derived>

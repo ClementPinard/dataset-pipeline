@@ -38,12 +38,14 @@ FisheyeFOVCamera::FisheyeFOVCamera(int width, int height, float fx, float fy,
                                    float cx, float cy, float omega)
     : CameraBaseImpl(width, height, fx, fy, cx, cy, Type::kFOV),
       omega_(omega),
-      two_tan_omega_half_(2.0f * tan(0.5f * omega)) {}
+      two_tan_omega_half_(2.0f * tan(0.5f * omega_)),
+      image_radius_(M_PI/(2 * omega_)) {}
 
 FisheyeFOVCamera::FisheyeFOVCamera(int width, int height,
                                    const float* parameters)
     : CameraBaseImpl(width, height, parameters[0], parameters[1], parameters[2],
-                 parameters[3], Type::kFOV),
+                     parameters[3], Type::kFOV),
       omega_(parameters[4]),
-      two_tan_omega_half_(2.0f * tan(0.5f * omega_)) {}
+      two_tan_omega_half_(2.0f * tan(0.5f * omega_)),
+      image_radius_(M_PI/(2 * omega_)) {}
 }  // namespace camera

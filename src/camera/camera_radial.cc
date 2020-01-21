@@ -36,12 +36,16 @@ RadialCamera::RadialCamera(int width, int height, float fx, float fy,
                            float cx, float cy, float k1, float k2)
     : CameraBaseImpl(width, height, fx, fy, cx, cy, Type::kRadial),
       distortion_parameters_(Eigen::Vector2f(k1, k2)) {
+  InitCutoff();
+  InitializeUnprojectionLookup();
 }
 
 RadialCamera::RadialCamera(int width, int height,
                                    const float* parameters)
     : CameraBaseImpl(width, height, parameters[0], parameters[1], parameters[2],
-                 parameters[3], Type::kRadial),
+                     parameters[3], Type::kRadial),
       distortion_parameters_(Eigen::Vector2f(parameters[4], parameters[5])) {
+  InitCutoff();
+  InitializeUnprojectionLookup();
 }
 }  // namespace camera

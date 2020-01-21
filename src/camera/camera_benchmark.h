@@ -48,33 +48,19 @@ class BenchmarkCamera : public CameraBaseImpl<BenchmarkCamera> {
   
   BenchmarkCamera(int width, int height, const float* parameters);
   
-  inline BenchmarkCamera* CreateUpdatedCamera(const float* parameters) const {
-    return new BenchmarkCamera(width_, height_, parameters);
-  }
-  
   static constexpr int ParameterCount() {
     return 4 + 8;
   }
   
   template <typename Derived>
   inline Eigen::Vector2f Distort(const Eigen::MatrixBase<Derived>& normalized_point) const {
-    const float r = sqrtf(normalized_point.x() * normalized_point.x() +
-                          normalized_point.y() * normalized_point.y());
-    float x, y;
-    if (r > radius_cutoff_squared_) {
-      return Eigen::Vector2f((normalized_point.x() < 0) ? -100 : 100,
-                         (normalized_point.y() < 0) ? -100 : 100);
-    }
+    const float r = normalized_point.norm();
     if (r > kEpsilon) {
       const float theta_by_r = atan2(r, 1.f) / r;
-      x = theta_by_r * normalized_point.x();
-      y = theta_by_r * normalized_point.y();
+      return DistortWithoutFisheye(normalized_point * theta_by_r);
     } else {
-      x = normalized_point.x();
-      y = normalized_point.y();
+      return DistortWithoutFisheye(normalized_point);
     }
-    
-    return DistortWithoutFisheye(Eigen::Vector2f(x, y));
   }
   
   template <typename Derived>
@@ -97,12 +83,10 @@ class BenchmarkCamera : public CameraBaseImpl<BenchmarkCamera> {
     const float r8 = r6 * r2;
     
     const float radial =
-        k1 * r2 + k2 * r4 + k3 * r6 + k4 * r8;
-    const float dx = 2.f * p1 * xy + p2 * (r2 + 2.f * x2) + sx1 * r2;
-    const float dy = 2.f * p2 * xy + p1 * (r2 + 2.f * y2) + sy1 * r2;
-    return Eigen::Vector2f(
-        normalized_point.x() + radial * normalized_point.x() + dx,
-        normalized_point.y() + radial * normalized_point.y() + dy);
+        1 + k1 * r2 + k2 * r4 + k3 * r6 + k4 * r8;
+    const Eigen::Vector2f dx_dy(2.f * p1 * xy + p2 * (r2 + 2.f * x2) + sx1 * r2,
+                                2.f * p2 * xy + p1 * (r2 + 2.f * y2) + sy1 * r2);
+    return normalized_point * radial + dx_dy;
   }
   
   // Returns the derivatives of the image coordinates with respect to the
@@ -195,9 +179,6 @@ class BenchmarkCamera : public CameraBaseImpl<BenchmarkCamera> {
     const float ny2 = ny * ny;
     const float r2 = nx2 + ny2;
     const float r = sqrtf(r2);
-    if (r > radius_cutoff_squared_) {
-      return Eigen::Vector4f(0, 0, 0, 0);
-    }
     if (r > kEpsilon) {
       const float atan_r = atanf(r);
       const float r3 = r2 * r;

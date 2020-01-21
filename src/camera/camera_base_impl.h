@@ -33,6 +33,7 @@
 
 #include <Eigen/Core>
 #include <glog/logging.h>
+#include <cstddef>
 
 #include "camera/camera_base.h"
 
@@ -44,8 +45,10 @@ template <class Child> class CameraBaseImpl : public CameraBase {
   
   CameraBaseImpl(int width, int height, float fx, float fy, float cx, float cy, Type type)
   : CameraBase(width, height, fx, fy, cx, cy, type),
-    undistortion_lookup_(0),
-    radius_cutoff_squared_(std::numeric_limits<float>::infinity()){}
+    undistortion_lookup_(nullptr),
+    radius_cutoff_squared_(std::numeric_limits<float>::infinity()){
+
+    }
   
   ~CameraBaseImpl() {
   delete[] undistortion_lookup_;
@@ -94,10 +97,14 @@ template <class Child> class CameraBaseImpl : public CameraBase {
       width_, height_, parameters);
   }
 
+  inline Child* CreateUpdatedCamera(const float* parameters) const {
+    return new Child(width_, height_, parameters);
+  }
+
   template <typename Derived>
   inline Eigen::Vector2f ProjectToNormalizedTextureCoordinates(const Eigen::MatrixBase<Derived>& normalized_point) const {
     const float r2 = normalized_point.squaredNorm();
-    if (r2 > radius_cutoff_squared_) {
+    if (isinf(r2) || r2 > radius_cutoff_squared_) {
       return Eigen::Vector2f(normalized_point.x() * std::numeric_limits<float>::infinity(),
                              normalized_point.y() * std::numeric_limits<float>::infinity());
     }else{
@@ -109,46 +116,58 @@ template <class Child> class CameraBaseImpl : public CameraBase {
   
   template <typename Derived>
   inline Eigen::Vector2f ProjectToImageCoordinates(const Eigen::MatrixBase<Derived>& normalized_point) const {
-    const float r2 = normalized_point.x() * normalized_point.x() + normalized_point.y() * normalized_point.y();
-    if (r2 > radius_cutoff_squared_) {
+    const float r2 = normalized_point.squaredNorm();
+    if (isinf(r2) || r2 > radius_cutoff_squared_) {
       return Eigen::Vector2f(normalized_point.x() * std::numeric_limits<float>::infinity(),
                              normalized_point.y() * std::numeric_limits<float>::infinity());
     }else{
       const Eigen::Vector2f distorted_point = static_cast<const Child*>(this)->Distort(normalized_point);
-      return Eigen::Vector2f(fx() * distorted_point.x() + ncx(),
-                             fy() * distorted_point.y() + ncy());
+      return Eigen::Vector2f(fx() * distorted_point.x() + cx(),
+                             fy() * distorted_point.y() + cy());
     }
   }
 
   inline Eigen::Vector2f UnprojectFromImageCoordinates(const int x, const int y) const {
-    return undistortion_lookup_[y * width_ + x];
+    if(undistortion_lookup_){
+      Eigen::Vector2i clamped_pixel(
+          std::max(0, std::min(width() - 1, x)),
+          std::max(0, std::min(height() - 1, y)));
+      return undistortion_lookup_[clamped_pixel.y() * width_ + clamped_pixel.x()];
+    }else{
+      return Undistort(Eigen::Vector2f(fx_inv() * x + cx_inv(), fy_inv() * y + cy_inv()));
+    }
   }
 
   template <typename Derived>
   inline Eigen::Vector2f UnprojectFromImageCoordinates(const Eigen::MatrixBase<Derived>& pixel_position) const {
     // Manual implementation of bilinearly filtering the lookup.
-    Eigen::Vector2f clamped_pixel = Eigen::Vector2f(
-        std::max(0.f, std::min(width() - 1.001f, pixel_position.x())),
-        std::max(0.f, std::min(height() - 1.001f, pixel_position.y())));
-    Eigen::Vector2i int_pos = Eigen::Vector2i(clamped_pixel.x(), clamped_pixel.y());
-    Eigen::Vector2f factor =
-        Eigen::Vector2f(clamped_pixel.x() - int_pos.x(), clamped_pixel.y() - int_pos.y());
-    Eigen::Vector2f top_left = undistortion_lookup_[int_pos.y() * width_ + int_pos.x()];
-    Eigen::Vector2f top_right =
-        undistortion_lookup_[int_pos.y() * width_ + (int_pos.x() + 1)];
-    Eigen::Vector2f bottom_left =
-        undistortion_lookup_[(int_pos.y() + 1) * width_ + int_pos.x()];
-    Eigen::Vector2f bottom_right =
-        undistortion_lookup_[(int_pos.y() + 1) * width_ + (int_pos.x() + 1)];
-    return Eigen::Vector2f(
-        (1 - factor.y()) *
-                ((1 - factor.x()) * top_left.x() + factor.x() * top_right.x()) +
-            factor.y() *
-                ((1 - factor.x()) * bottom_left.x() + factor.x() * bottom_right.x()),
-        (1 - factor.y()) *
-                ((1 - factor.x()) * top_left.y() + factor.x() * top_right.y()) +
-            factor.y() *
-                ((1 - factor.x()) * bottom_left.y() + factor.x() * bottom_right.y()));
+    if(undistortion_lookup_){
+      Eigen::Vector2f clamped_pixel = Eigen::Vector2f(
+          std::max(0.f, std::min(width() - 1.001f, pixel_position.x())),
+          std::max(0.f, std::min(height() - 1.001f, pixel_position.y())));
+      Eigen::Vector2i int_pos = Eigen::Vector2i(clamped_pixel.x(), clamped_pixel.y());
+      Eigen::Vector2f factor =
+          Eigen::Vector2f(clamped_pixel.x() - int_pos.x(), clamped_pixel.y() - int_pos.y());
+      Eigen::Vector2f top_left = undistortion_lookup_[int_pos.y() * width_ + int_pos.x()];
+      Eigen::Vector2f top_right =
+          undistortion_lookup_[int_pos.y() * width_ + (int_pos.x() + 1)];
+      Eigen::Vector2f bottom_left =
+          undistortion_lookup_[(int_pos.y() + 1) * width_ + int_pos.x()];
+      Eigen::Vector2f bottom_right =
+          undistortion_lookup_[(int_pos.y() + 1) * width_ + (int_pos.x() + 1)];
+      return Eigen::Vector2f(
+          (1 - factor.y()) *
+                  ((1 - factor.x()) * top_left.x() + factor.x() * top_right.x()) +
+              factor.y() *
+                  ((1 - factor.x()) * bottom_left.x() + factor.x() * bottom_right.x()),
+          (1 - factor.y()) *
+                  ((1 - factor.x()) * top_left.y() + factor.x() * top_right.y()) +
+              factor.y() *
+                  ((1 - factor.x()) * bottom_left.y() + factor.x() * bottom_right.y()));
+    }else{
+      return Undistort(Eigen::Vector2f(fx_inv() * pixel_position.x() + cx_inv(),
+                                       fy_inv() * pixel_position.y() + cy_inv()));
+    }
   }
 
     // This iterative Undistort() function should not be used in
@@ -156,7 +175,8 @@ template <class Child> class CameraBaseImpl : public CameraBase {
   // as used by the UnprojectFromImageCoordinates() methods. Undistort() is only
   // used for calculating this undistortion texture once.
   template <typename Derived>
-  inline Eigen::Vector2f Undistort(const Eigen::MatrixBase<Derived>& distorted_point, float uu, float vv, bool* converged) const {
+  inline Eigen::Vector2f IterativeUndistort(const Eigen::MatrixBase<Derived>& distorted_point,
+                                            float uu, float vv, bool* converged) const {
     const std::size_t kNumUndistortionIterations = 100;
     const Child* child = static_cast<const Child*>(this);
 
@@ -199,7 +219,7 @@ template <class Child> class CameraBaseImpl : public CameraBase {
 
   template <typename Derived>
   inline Eigen::Vector2f Undistort(const Eigen::MatrixBase<Derived>& distorted_point) const {
-    return Undistort(distorted_point, distorted_point.x(), distorted_point.y(), nullptr);
+    return IterativeUndistort(distorted_point, distorted_point.x(), distorted_point.y(), nullptr);
   }
 
   void InitializeUnprojectionLookup() {
@@ -242,7 +262,7 @@ template <class Child> class CameraBaseImpl : public CameraBase {
         float x_init = distorted_point.x() + kGridHalfExtent * (x - 0.5f * kNumGridSteps) / (0.5f * kNumGridSteps);
         
         bool test_converged;
-        Eigen::Vector2f result = static_cast<const Child*>(this)->Undistort(distorted_point, x_init, y_init, &test_converged);
+        Eigen::Vector2f result = IterativeUndistort(distorted_point, x_init, y_init, &test_converged);
         if (test_converged) {
           float radius = sqrtf(result.x() * result.x() + result.y() * result.y());
           if (radius < kImproveThreshold * best_radius) {

@@ -49,24 +49,39 @@ class FisheyeFOVCamera : public CameraBaseImpl<FisheyeFOVCamera> {
   
   FisheyeFOVCamera(int width, int height, const float* parameters);
   
-  inline FisheyeFOVCamera* CreateUpdatedCamera(const float* parameters) const {
-    return new FisheyeFOVCamera(width_, height_, parameters);
-  }
-  
   static constexpr int ParameterCount() {
     return 4 + 1;
   }
 
   template <typename Derived>
   inline Eigen::Vector2f Distort(const Eigen::MatrixBase<Derived>& normalized_point) const {
-    const float r = sqrtf(normalized_point.x() * normalized_point.x() +
-                          normalized_point.y() * normalized_point.y());
+    const float r = normalized_point.norm();
     const float factor =
         (r < kEpsilon) ?
         1.f :
         (atanf(r * two_tan_omega_half_) / (r * omega_));
-    return Eigen::Vector2f(factor * normalized_point.x(),
-                       factor * normalized_point.y());
+    return normalized_point * factor;
+  }
+
+  inline Eigen::Vector2f UnprojectFromImageCoordinates(const int x, const int y) const {
+    return Undistort(Eigen::Vector2f(fx_inv() * x + cx_inv(), fy_inv() * y + cy_inv()));
+  }
+  
+  template <typename Derived>
+  inline Eigen::Vector2f UnprojectFromImageCoordinates(const Eigen::MatrixBase<Derived>& pixel_position) const {
+    return Undistort(Eigen::Vector2f(fx_inv() * pixel_position.x() + cx_inv(), fy_inv() * pixel_position.y() + cy_inv()));
+  }
+  
+  template <typename Derived>
+  inline Eigen::Vector2f Undistort(const Eigen::MatrixBase<Derived>& distorted_point) const {
+    const float r = distorted_point.norm();
+    const float factor =
+        (r < kEpsilon) ?
+        1.f :
+        (r > image_radius_) ?
+        std::numeric_limits<float>::infinity():
+        (tanf(r * omega_) / (r * two_tan_omega_half_));
+    return factor * distorted_point;
   }
   
   // Returns the derivatives of the image coordinates with respect to the
@@ -79,9 +94,7 @@ class FisheyeFOVCamera : public CameraBaseImpl<FisheyeFOVCamera> {
     const Eigen::Vector2f distorted_point = Distort(normalized_point);
     
     // nx^2 + ny^2
-    const float radius_square =
-        normalized_point.x() * normalized_point.x() +
-        normalized_point.y() * normalized_point.y();
+    const float radius_square = normalized_point.squaredNorm();
     // sqrtf(nx^2 + ny^2)
     const float radius = sqrtf(radius_square);
     // 4 * tan(omega / 2) * tan(omega / 2)
@@ -176,6 +189,7 @@ class FisheyeFOVCamera : public CameraBaseImpl<FisheyeFOVCamera> {
  private:
   float omega_;
   float two_tan_omega_half_;
+  float image_radius_;
   
   static constexpr float kEpsilon = 1e-6f;
 };

@@ -64,6 +64,16 @@ class SimplePinholeCamera : public CameraBaseImpl<SimplePinholeCamera> {
   inline Eigen::Vector2f Undistort(const Eigen::MatrixBase<Derived>& normalized_point) const {
     return normalized_point;
   }
+
+  inline Eigen::Vector2f UnprojectFromImageCoordinates(const int x, const int y) const {
+    return Undistort(Eigen::Vector2f(fx_inv() * x + cx_inv(), fy_inv() * y + cy_inv()));
+  }
+  
+  template <typename Derived>
+  inline Eigen::Vector2f UnprojectFromImageCoordinates(const Eigen::MatrixBase<Derived>& pixel_position) const {
+    return Undistort(Eigen::Vector2f(fx_inv() * pixel_position.x() + cx_inv(), fy_inv() * pixel_position.y() + cy_inv()));
+  }
+
   // Returns the derivatives of the image coordinates with respect to the
   // intrinsics. For x and y, 4 values each are returned for fx, fy, cx, cy.
   template <typename Derived>

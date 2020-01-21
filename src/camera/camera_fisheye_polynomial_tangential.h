@@ -60,35 +60,32 @@ class FisheyePolynomialTangentialCamera : public CameraBaseImpl<FisheyePolynomia
 
   template <typename Derived>
   inline Eigen::Vector2f Distort(const Eigen::MatrixBase<Derived>& normalized_point) const {
-    const float r = sqrtf(normalized_point.x() * normalized_point.x() +
-                          normalized_point.y() * normalized_point.y());
-    float x, y;
+    const float r = normalized_point.norm();
     if (r > kEpsilon) {
       const float theta_by_r = atan2(r, 1.f) / r;
-      x = theta_by_r * normalized_point.x();
-      y = theta_by_r * normalized_point.y();
+      return DistortWithoutFisheye(normalized_point * theta_by_r);
     } else {
-      x = normalized_point.x();
-      y = normalized_point.y();
+      return DistortWithoutFisheye(normalized_point);
     }
-    
-    return DistortWithoutFisheye(Eigen::Vector2f(x, y));
   }
   
   template <typename Derived>
   inline Eigen::Vector2f DistortWithoutFisheye(const Eigen::MatrixBase<Derived>& normalized_point) const {
+    const float k1 = distortion_parameters_.x();
+    const float k2 = distortion_parameters_.y();
+    const float p1 = distortion_parameters_.z();
+    const float p2 = distortion_parameters_.w();
+
     const float x2 = normalized_point.x() * normalized_point.x();
     const float xy = normalized_point.x() * normalized_point.y();
     const float y2 = normalized_point.y() * normalized_point.y();
     const float r2 = x2 + y2;
 
-    const float radial =
-        r2 * (distortion_parameters_.x() + r2 * distortion_parameters_.y());
-    const float dx = 2.f * distortion_parameters_.z() * xy + distortion_parameters_.w() * (r2 + 2.f * x2);
-    const float dy = 2.f * distortion_parameters_.w() * xy + distortion_parameters_.z() * (r2 + 2.f * y2);
-    return Eigen::Vector2f(
-        normalized_point.x() + radial * normalized_point.x() + dx,
-        normalized_point.y() + radial * normalized_point.y() + dy);
+    const float radial = 1 + r2 * (k1 + r2 * k2);
+    const Eigen::Vector2f dx_dy(
+          2.f * p1 * xy + p2 * (r2 + 2.f * x2),
+          2.f * p2 * xy + p1 * (r2 + 2.f * y2));
+    return normalized_point * radial + dx_dy;
   }
 
   // Returns the derivatives of the image coordinates with respect to the

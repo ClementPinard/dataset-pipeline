@@ -56,14 +56,12 @@ class RadialCamera : public CameraBaseImpl<RadialCamera> {
 
   template <typename Derived>
   inline Eigen::Vector2f Distort(const Eigen::MatrixBase<Derived>& normalized_point) const {
-    const float r2 = normalized_point.x() * normalized_point.x() +
-                     normalized_point.y() * normalized_point.y();
+    const float k1 = distortion_parameters_.x();
+    const float k2 = distortion_parameters_.y();
+    const float r2 = normalized_point.squaredNorm();
 
-    const float factw =
-        1.0f +
-        r2 * (distortion_parameters_.x() +
-              r2 * (distortion_parameters_.y()));
-    return Eigen::Vector2f(factw * normalized_point.x(), factw * normalized_point.y());
+    const float radial = 1.0f + r2 * (k1 + r2 * k2);
+    return normalized_point * radial;
   }
 
   // Returns the derivatives of the image coordinates with respect to the
@@ -74,9 +72,7 @@ class RadialCamera : public CameraBaseImpl<RadialCamera> {
       const Eigen::MatrixBase<Derived>& normalized_point, float* deriv_x, float* deriv_y) const {
     const Eigen::Vector2f distorted_point = Distort(normalized_point);
     
-    const float radius_square =
-        normalized_point.x() * normalized_point.x() +
-        normalized_point.y() * normalized_point.y();
+    const float radius_square = normalized_point.squaredNorm();
     
     deriv_x[0] = distorted_point.x();
     deriv_x[1] = 0.f;

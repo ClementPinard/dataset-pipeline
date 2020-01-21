@@ -53,25 +53,16 @@ class FisheyePolynomial4Camera : public CameraBaseImpl<FisheyePolynomial4Camera>
   static constexpr int ParameterCount() {
     return 4 + 4;
   }
-  
+
   template <typename Derived>
   inline Eigen::Vector2f Distort(const Eigen::MatrixBase<Derived>& normalized_point) const {
-    const float r = sqrtf(normalized_point.x() * normalized_point.x() +
-                          normalized_point.y() * normalized_point.y());
-    float x, y;
-    if (r > radius_cutoff_squared_) {
-      return Eigen::Vector2f(99 * normalized_point.x(), 99 * normalized_point.y());
-    }
+    const float r = normalized_point.norm();
     if (r > kEpsilon) {
       const float theta_by_r = atan2(r, 1.f) / r;
-      x = theta_by_r * normalized_point.x();
-      y = theta_by_r * normalized_point.y();
+      return DistortWithoutFisheye(normalized_point * theta_by_r);
     } else {
-      x = normalized_point.x();
-      y = normalized_point.y();
+      return DistortWithoutFisheye(normalized_point);
     }
-    
-    return DistortWithoutFisheye(Eigen::Vector2f(x, y));
   }
   
   template <typename Derived>
@@ -80,19 +71,10 @@ class FisheyePolynomial4Camera : public CameraBaseImpl<FisheyePolynomial4Camera>
     const float k2 = distortion_parameters_[1];
     const float k3 = distortion_parameters_[2];
     const float k4 = distortion_parameters_[3];
+    const float r2 = normalized_point.squaredNorm();
     
-    const float x2 = normalized_point.x() * normalized_point.x();
-    const float y2 = normalized_point.y() * normalized_point.y();
-    const float r2 = x2 + y2;
-    const float r4 = r2 * r2;
-    const float r6 = r4 * r2;
-    const float r8 = r6 * r2;
-    
-    const float radial =
-        k1 * r2 + k2 * r4 + k3 * r6 + k4 * r8;
-    return Eigen::Vector2f(
-        normalized_point.x() + radial * normalized_point.x(),
-        normalized_point.y() + radial * normalized_point.y());
+    const float radial = 1 + r2*(k1 + r2*(k2  + r2*(k3 + r2*k4)));
+    return normalized_point * radial;
   }
   
   // Returns the derivatives of the image coordinates with respect to the
@@ -160,9 +142,6 @@ class FisheyePolynomial4Camera : public CameraBaseImpl<FisheyePolynomial4Camera>
     const float ny2 = ny * ny;
     const float r2 = nx2 + ny2;
     const float r = sqrtf(r2);
-    if (r2 > radius_cutoff_squared_) {
-      return Eigen::Vector4f(0, 0, 0, 0);
-    }
     if (r > kEpsilon) {
       const float atan_r = atanf(r);
       const float r3 = r2 * r;

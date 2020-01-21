@@ -37,7 +37,8 @@ PolynomialCamera::PolynomialCamera(int width, int height, float fx, float fy,
                                    float k3)
     : CameraBaseImpl(width, height, fx, fy, cx, cy, Type::kPolynomial),
       distortion_parameters_(Eigen::Vector3f(k1, k2, k3)) {
-    InitCutoff();
+  InitCutoff();
+  InitializeUnprojectionLookup();
 }
 
 PolynomialCamera::PolynomialCamera(int width, int height,
@@ -46,6 +47,7 @@ PolynomialCamera::PolynomialCamera(int width, int height,
                      parameters[3], Type::kPolynomial),
       distortion_parameters_(Eigen::Vector3f(parameters[4], parameters[5],
                                          parameters[6])) {
-    InitCutoff();
+  InitCutoff();
+  InitializeUnprojectionLookup();
 }
 }  // namespace camera

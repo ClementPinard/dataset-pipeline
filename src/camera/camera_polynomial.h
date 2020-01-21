@@ -42,7 +42,7 @@ namespace camera {
 class PolynomialCamera : public CameraBaseImpl<PolynomialCamera> {
  public:
   PolynomialCamera(int width, int height, float fx, float fy, float cx,
-                   float cy, float p1, float p2, float p3);
+                   float cy, float k1, float k2, float k3);
   
   PolynomialCamera(int width, int height, const float* parameters);
   
@@ -56,19 +56,19 @@ class PolynomialCamera : public CameraBaseImpl<PolynomialCamera> {
 
   template <typename Derived>
   inline Eigen::Vector2f Distort(const Eigen::MatrixBase<Derived>& normalized_point) const {
-    const float r2 = normalized_point.x() * normalized_point.x() +
-                     normalized_point.y() * normalized_point.y();
+    const float k1 = distortion_parameters_.x();
+    const float k2 = distortion_parameters_.y();
+    const float k3 = distortion_parameters_.z();
 
-    const float factw =
-        1.0f +
-        r2 * (distortion_parameters_.x() +
-              r2 * (distortion_parameters_.y() + r2 * distortion_parameters_.z()));
-    return Eigen::Vector2f(factw * normalized_point.x(), factw * normalized_point.y());
+    const float r2 = normalized_point.squaredNorm();
+
+    const float factw = 1.0f + r2 * (k1 + r2 * (k2 + r2 * k3));
+    return normalized_point * factw;
   }
 
   // Returns the derivatives of the image coordinates with respect to the
   // intrinsics. For x and y, 7 values each are returned for fx, fy, cx, cy,
-  // p1, p2, p3.
+  // k1, k2, k3.
   template <typename Derived>
   inline void NormalizedDerivativeByIntrinsics(
       const Eigen::MatrixBase<Derived>& normalized_point, float* deriv_x, float* deriv_y) const {
@@ -140,15 +140,14 @@ class PolynomialCamera : public CameraBaseImpl<PolynomialCamera> {
     parameters[6] = distortion_parameters_.z();
   }
 
-  // Returns the distortion parameters p1, p2, and p3.
+  // Returns the distortion parameters k1, k2, and k3.
   inline const Eigen::Vector3f& distortion_parameters() const {
     return distortion_parameters_;
   }
 
  private:
-  void Initialize();
   
-  // The distortion parameters p1, p2, and p3.
+  // The distortion parameters k1, k2, and k3.
   Eigen::Vector3f distortion_parameters_;
 
 };

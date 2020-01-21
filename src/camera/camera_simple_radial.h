@@ -46,10 +46,6 @@ class SimpleRadialCamera : public CameraBaseImpl<SimpleRadialCamera> {
   
   SimpleRadialCamera(int width, int height, const float* parameters);
   
-  inline SimpleRadialCamera* CreateUpdatedCamera(const float* parameters) const {
-    return new SimpleRadialCamera(width_, height_, parameters);
-  }
-  
   static constexpr int ParameterCount() {
     return 3 + 1;
   }
@@ -62,16 +58,9 @@ class SimpleRadialCamera : public CameraBaseImpl<SimpleRadialCamera> {
 
   template <typename Derived>
   inline Eigen::Vector2f Distort(const Eigen::MatrixBase<Derived>& normalized_point) const {
-    const float r2 = normalized_point.x() * normalized_point.x() +
-                     normalized_point.y() * normalized_point.y();
-    if(r2 > radius_cutoff_squared_){
-      return Eigen::Vector2f(99 * normalized_point.x(), 99 * normalized_point.y());
-    }
-    const float factw =
-        1.0f + r2 * k1_;
-    return Eigen::Vector2f(factw * normalized_point.x(), factw * normalized_point.y());
+    const float r2 = normalized_point.squaredNorm();
+    return normalized_point * (1.0f + r2 * k1_);
   }
-  
   // Returns the derivatives of the image coordinates with respect to the
   // intrinsics. For x and y, 4 values each are returned for f, cx, cy, k.
   template <typename Derived>
@@ -111,15 +100,10 @@ class SimpleRadialCamera : public CameraBaseImpl<SimpleRadialCamera> {
     const float nxs = nx * nx;
     const float nys = ny * ny;
     const float ru2 = nxs + nys;
-    const float k = k1_;
-    const float r2_cutoff = radius_cutoff_squared_;
-
-    if(ru2 > r2_cutoff)
-      return Eigen::Vector4f(0, 0, 0, 0);
-    const float ddx_dnx = k * (ru2 + 2 * nxs) + 1;
-    const float ddx_dny = 2 * nx * ny * k;
+    const float ddx_dnx = k1_ * (ru2 + 2 * nxs) + 1;
+    const float ddx_dny = 2 * nx * ny * k1_;
     const float ddy_dnx = ddx_dny;
-    const float ddy_dny = k * (ru2 + 2 * nys) + 1;
+    const float ddy_dny = k1_ * (ru2 + 2 * nys) + 1;
 
     return Eigen::Vector4f(ddx_dnx, ddx_dny, ddy_dnx, ddy_dny);
   }
@@ -132,13 +116,13 @@ class SimpleRadialCamera : public CameraBaseImpl<SimpleRadialCamera> {
   }
 
   // Returns the distortion parameters k and r_cutoff.
-  inline Eigen::Vector2f distortion_parameters() const {
-    return Eigen::Vector2f(k1_, radius_cutoff_squared_);
+  inline float distortion_parameters() const {
+    return k1_;
   }
 
  private:
   
-  // The distortion parameter k. and r_cutoff
+  // The distortion parameter k
   float k1_;
 };
 

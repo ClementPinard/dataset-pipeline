@@ -38,5 +38,5 @@ PinholeCamera::PinholeCamera(int width, int height, float fx, float fy,
 
 PinholeCamera::PinholeCamera(int width, int height, const float* parameters)
     : CameraBaseImpl(width, height, parameters[0], parameters[1], parameters[2],
-                 parameters[3], Type::kPinhole) {}
+                     parameters[3], Type::kPinhole) {}
 }  // namespace camera

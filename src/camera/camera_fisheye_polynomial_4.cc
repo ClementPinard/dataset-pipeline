@@ -38,14 +38,16 @@ FisheyePolynomial4Camera::FisheyePolynomial4Camera(
     : CameraBaseImpl(width, height, fx, fy, cx, cy, Type::kFisheyePolynomial4),
       distortion_parameters_{k1, k2, k3, k4} {
   InitCutoff();
+  InitializeUnprojectionLookup();
 }
 
 FisheyePolynomial4Camera::FisheyePolynomial4Camera(
     int width, int height, const float* parameters)
     : CameraBaseImpl(width, height, parameters[0], parameters[1], parameters[2],
-                 parameters[3], Type::kFisheyePolynomial4),
-      distortion_parameters_{parameters[4], parameters[5], parameters[6],
-                             parameters[7]} {
+                    parameters[3], Type::kFisheyePolynomial4),
+      distortion_parameters_{parameters[4], parameters[5],
+                             parameters[6], parameters[7]} {
   InitCutoff();
+  InitializeUnprojectionLookup();
 }
 }  // namespace camera
