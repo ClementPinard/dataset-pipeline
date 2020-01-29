@@ -41,9 +41,10 @@
 
 namespace {
 template<class Camera>
-void TestRendererPixelAccuracy(const Camera& camera) {
+void TestRendererPixelAccuracy(Camera& camera) {
+  camera.InitializeUnprojectionLookup();
   std::mt19937 generator(/*seed*/ 0);
-  //assumin image is 640x480, must be divider of 160
+  //assuming image is 640x480, must be divider of 160
   const int kStep = 20;
   
   // Initialize an OpenGL context and make it current.
@@ -165,11 +166,11 @@ void TestRendererPixelAccuracy(const Camera& camera) {
           ASSERT_NEAR(y, image_point.y(), 1e-2f);
           ASSERT_NEAR(depth_value, point.z, 5e-2f)
               << "Error at pixel (" << x << ", " << y << ") i=" << i;
-          ASSERT_EQ(rgb_color[0], point.r)
+          EXPECT_EQ(rgb_color[0], point.r)
               << "Error at pixel (" << x << ", " << y << ")";
-          ASSERT_EQ(rgb_color[1], point.g)
+          EXPECT_EQ(rgb_color[1], point.g)
               << "Error at pixel (" << x << ", " << y << ")";
-          ASSERT_EQ(rgb_color[2], point.b)
+          EXPECT_EQ(rgb_color[2], point.b)
               << "Error at pixel (" << x << ", " << y << ")";
         } else {
           ASSERT_EQ(depth_value, 0)
@@ -242,6 +243,18 @@ TEST(Renderer, PixelAccuracy_SimpleRadial) {
   TestRendererPixelAccuracy(simple_radial_camera);
 }
 
+TEST(Renderer, PixelAccuracy_RadialFisheye) {
+  camera::RadialFisheyeCamera radial_fisheye_camera(kImageWidth, kImageHeight, kFX,
+                                             kFY, kCX, kCY, 0.221184, 0.128597);
+  TestRendererPixelAccuracy(radial_fisheye_camera);
+}
+
+TEST(Renderer, PixelAccuracy_SimpleRadialFisheye) {
+  camera::SimpleRadialFisheyeCamera simple_radial_fisheye_camera(kImageWidth, kImageHeight,
+                                                          kFX, kCX, kCY, 0.221184);
+  TestRendererPixelAccuracy(simple_radial_fisheye_camera);
+}
+
 TEST(Renderer, PixelAccuracy_FisheyeFOV) {
   camera::FisheyeFOVCamera fisheye_fov_camera(kImageWidth, kImageHeight, kFX,
                                               kFY, kCX, kCY, kOmega);
@@ -257,8 +270,8 @@ TEST(Renderer, PixelAccuracy_PolynomialTangential) {
 
 TEST(Renderer, PixelAccuracy_FisheyePolynomial4) {
   camera::FisheyePolynomial4Camera fisheye_polynomial_4_camera(
-      kImageWidth, kImageHeight, 340.926, 341.124, 302.4, 201.6, 0.0,
-      0.0, 0.00, 0.00);
+      kImageWidth, kImageHeight, 340.926, 341.124, 302.4, 201.6, 0.221184,
+          0.128597, 0.0623079, 0.20419);
   TestRendererPixelAccuracy(fisheye_polynomial_4_camera);
 }
 

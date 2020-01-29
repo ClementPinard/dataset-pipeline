@@ -166,6 +166,33 @@ class RendererProgram<camera::SimpleRadialCamera> : public RendererProgramBase {
 };
 
 template <>
+class RendererProgram<camera::RadialFisheyeCamera> : public RendererProgramBase {
+ public:
+  const GLchar* GetShaderUniformDefinitions() const override;
+  const GLchar* GetShaderDistortionCode() const override;
+  void GetUniformLocations(const ShaderProgramOpenGL& shader_program) override;
+  void SetUniformValues(const camera::RadialFisheyeCamera& camera) const;
+
+ private:
+  GLint u_k1_location_;
+  GLint u_k2_location_;
+  GLint radius_cutoff_squared_location_;
+};
+
+template <>
+class RendererProgram<camera::SimpleRadialFisheyeCamera> : public RendererProgramBase {
+ public:
+  const GLchar* GetShaderUniformDefinitions() const override;
+  const GLchar* GetShaderDistortionCode() const override;
+  void GetUniformLocations(const ShaderProgramOpenGL& shader_program) override;
+  void SetUniformValues(const camera::SimpleRadialFisheyeCamera& camera) const;
+
+ private:
+  GLint u_k_location_;
+  GLint radius_cutoff_squared_location_;
+};
+
+template <>
 class RendererProgram<camera::PolynomialTangentialCamera> : public RendererProgramBase {
  public:
   const GLchar* GetShaderUniformDefinitions() const override;

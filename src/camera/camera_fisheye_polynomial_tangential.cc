@@ -28,26 +28,17 @@
 
 
 #include "camera/camera_fisheye_polynomial_tangential.h"
-
-#include <glog/logging.h>
+#include "camera/camera_polynomial_tangential.h"
 
 namespace camera {
 FisheyePolynomialTangentialCamera::FisheyePolynomialTangentialCamera(
     int width, int height, float fx, float fy, float cx, float cy, float k1,
     float k2, float p1, float p2)
-    : CameraBaseImpl(width, height, fx, fy, cx, cy, Type::kFisheyePolynomialTangential),
-      distortion_parameters_(Eigen::Vector4f(k1, k2, p1, p2)) {
-  InitCutoff();
-  InitializeUnprojectionLookup();
-}
+  : FisheyeBase(width, height, fx, fy, cx, cy, Type::kFisheyePolynomialTangential,
+    new PolynomialTangentialCamera(width, height, fx, fy, cx, cy, k1, k2, p1, p2)){}
 
 FisheyePolynomialTangentialCamera::FisheyePolynomialTangentialCamera(
     int width, int height, const float* parameters)
-    : CameraBaseImpl(width, height, parameters[0], parameters[1], parameters[2],
-                     parameters[3], Type::kFisheyePolynomialTangential),
-      distortion_parameters_(Eigen::Vector4f(parameters[4], parameters[5],
-                                             parameters[6], parameters[7])) {
-  InitCutoff();
-  InitializeUnprojectionLookup();
-}
+  : FisheyeBase(width, height, parameters[0], parameters[1], parameters[2], parameters[3],
+                 Type::kFisheyePolynomialTangential, new PolynomialTangentialCamera(width, height, parameters)){}
 }  // namespace camera

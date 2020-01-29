@@ -28,30 +28,20 @@
 
 
 #include "camera/camera_benchmark.h"
-
-#include <limits>
-
-#include <glog/logging.h>
+#include "camera/camera_thin_prism.h"
 
 namespace camera {
 
 BenchmarkCamera::BenchmarkCamera(
     int width, int height, float fx, float fy, float cx, float cy, float k1,
     float k2, float p1, float p2, float k3, float k4, float sx1, float sy1)
-    : CameraBaseImpl(width, height, fx, fy, cx, cy, Type::kBenchmark),
-      distortion_parameters_{k1, k2, p1, p2, k3, k4, sx1, sy1} {
-  InitCutoff();
-  InitializeUnprojectionLookup();
-}
+    : FisheyeBase(width, height, fx, fy, cx, cy, Type::kBenchmark,
+      new ThinPrismCamera(width, height, fx, fy, cx, cy,
+                          k1, k2, p1, p2, k3, k4, sx1, sy1)) {}
 
 BenchmarkCamera::BenchmarkCamera(
     int width, int height, const float* parameters)
-    : CameraBaseImpl(width, height, parameters[0], parameters[1], parameters[2],
-                     parameters[3], Type::kBenchmark),
-      distortion_parameters_{parameters[4], parameters[5], parameters[6],
-                             parameters[7], parameters[8], parameters[9],
-                             parameters[10], parameters[11]} {
-  InitCutoff();
-  InitializeUnprojectionLookup();
-}
+    : FisheyeBase(width, height, parameters[0], parameters[1], parameters[2],
+                  parameters[3], Type::kBenchmark,
+                  new ThinPrismCamera(width, height, parameters)) {}
 }  // namespace camera

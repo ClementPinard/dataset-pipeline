@@ -39,7 +39,6 @@ FullOpenCVCamera::FullOpenCVCamera(int width, int height, float fx, float fy,
     : CameraBaseImpl(width, height, fx, fy, cx, cy, Type::kFullOpenCV),
       distortion_parameters_{k1, k2, p1, p2, k3, k4, k5, k6} {
   InitCutoff();
-  InitializeUnprojectionLookup();
 }
 
 FullOpenCVCamera::FullOpenCVCamera(int width, int height,
@@ -51,6 +50,5 @@ FullOpenCVCamera::FullOpenCVCamera(int width, int height,
                              parameters[8], parameters[9],
                              parameters[10], parameters[11]} {
   InitCutoff();
-  InitializeUnprojectionLookup();
 }
 }  // namespace camera

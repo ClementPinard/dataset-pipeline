@@ -354,6 +354,49 @@ void RendererProgram<camera::RadialCamera>::SetUniformValues(
 }
 
 const GLchar* RendererProgram<
+    camera::RadialFisheyeCamera>::GetShaderUniformDefinitions() const {
+  return "uniform float k1;\n"
+         "uniform float k2;\n"
+         "uniform float radius_cutoff_squared;\n";
+}
+
+const GLchar*
+RendererProgram<camera::RadialFisheyeCamera>::GetShaderDistortionCode() const {
+  // (Mis)using localPoint.w for intermediate results.
+  return "float nx = localPoint.x / localPoint.z;\n"
+         "float ny = localPoint.y / localPoint.z;\n"
+         "float r2 = nx * nx + ny * ny;\n"
+         "float r = sqrt(r2);\n"
+         "if (r > 1e-6) {\n"
+         "  float theta_by_r = atan(r, 1.0) / r;\n"
+         "  nx = theta_by_r * nx;"
+         "  ny = theta_by_r * ny;"
+         "  r2 = nx * nx + ny * ny;"
+         "}\n"
+         "if (r2 <= radius_cutoff_squared) {\n"
+         "  r2 = 1.0 + r2 * (k1 + r2 * k2);\n"
+         "} else {\n"
+         "  r2 = 99.0;\n"
+         "}\n"
+         "localPoint.x = localPoint.z * r2 * nx;\n"
+         "localPoint.y = localPoint.z * r2 * ny;\n";
+}
+
+void RendererProgram<camera::RadialFisheyeCamera>::GetUniformLocations(
+    const ShaderProgramOpenGL& shader_program) {
+  u_k1_location_ = shader_program.GetUniformLocationOrAbort("k1");
+  u_k2_location_ = shader_program.GetUniformLocationOrAbort("k2");
+  radius_cutoff_squared_location_ = shader_program.GetUniformLocationOrAbort("radius_cutoff_squared");
+}
+
+void RendererProgram<camera::RadialFisheyeCamera>::SetUniformValues(
+    const camera::RadialFisheyeCamera& camera) const {
+  glUniform1f(u_k1_location_, camera.distortion_parameters().x());
+  glUniform1f(u_k2_location_, camera.distortion_parameters().y());
+  glUniform1f(radius_cutoff_squared_location_, camera.radius_cutoff_squared());
+}
+
+const GLchar* RendererProgram<
     camera::SimpleRadialCamera>::GetShaderUniformDefinitions() const {
   return "uniform float k;\n"
          "uniform float radius_cutoff_squared;\n";
@@ -381,6 +424,46 @@ void RendererProgram<camera::SimpleRadialCamera>::GetUniformLocations(
 
 void RendererProgram<camera::SimpleRadialCamera>::SetUniformValues(
     const camera::SimpleRadialCamera& camera) const {
+  glUniform1f(u_k_location_, camera.distortion_parameters());
+  glUniform1f(radius_cutoff_squared_location_, camera.radius_cutoff_squared());
+}
+
+const GLchar* RendererProgram<
+    camera::SimpleRadialFisheyeCamera>::GetShaderUniformDefinitions() const {
+  return "uniform float k;\n"
+         "uniform float radius_cutoff_squared;\n";
+}
+
+const GLchar*
+RendererProgram<camera::SimpleRadialFisheyeCamera>::GetShaderDistortionCode() const {
+  // (Mis)using localPoint.w for intermediate results.
+  return "float nx = localPoint.x / localPoint.z;\n"
+         "float ny = localPoint.y / localPoint.z;\n"
+         "float r2 = nx * nx + ny * ny;\n"
+         "float r = sqrt(r2);\n"
+         "if (r > 1e-6) {\n"
+         "  float theta_by_r = atan(r, 1.0) / r;\n"
+         "  r2 = r2 * theta_by_r * theta_by_r;"
+         "  nx = nx * theta_by_r;"
+         "  ny = ny * theta_by_r;"
+         "}\n"
+         "if (r2 <= radius_cutoff_squared) {\n"
+         "  r2 = 1.0 + r2 * k;\n"
+         "} else {\n"
+         "  r2 = 99.0;\n"
+         "}\n"
+         "localPoint.x = localPoint.z * r2 * nx;\n"
+         "localPoint.y = localPoint.z * r2 * ny;\n";
+}
+
+void RendererProgram<camera::SimpleRadialFisheyeCamera>::GetUniformLocations(
+    const ShaderProgramOpenGL& shader_program) {
+  u_k_location_ = shader_program.GetUniformLocationOrAbort("k");
+  radius_cutoff_squared_location_ = shader_program.GetUniformLocationOrAbort("radius_cutoff_squared");
+}
+
+void RendererProgram<camera::SimpleRadialFisheyeCamera>::SetUniformValues(
+    const camera::SimpleRadialFisheyeCamera& camera) const {
   glUniform1f(u_k_location_, camera.distortion_parameters());
   glUniform1f(radius_cutoff_squared_location_, camera.radius_cutoff_squared());
 }

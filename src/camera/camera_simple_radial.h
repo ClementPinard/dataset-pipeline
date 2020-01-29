@@ -35,11 +35,12 @@
 #include <glog/logging.h>
 #include "camera/camera_base.h"
 #include "camera/camera_base_impl.h"
+#include "camera/camera_base_impl_radial.h"
 
 namespace camera {
 
 // Models pinhole cameras with a polynomial distortion model.
-class SimpleRadialCamera : public CameraBaseImpl<SimpleRadialCamera> {
+class SimpleRadialCamera : public RadialBase<SimpleRadialCamera> {
  public:
   SimpleRadialCamera(int width, int height, float f,
                      float cx, float cy, float k);
@@ -56,28 +57,17 @@ class SimpleRadialCamera : public CameraBaseImpl<SimpleRadialCamera> {
 
   void InitCutoff();
 
-  template <typename Derived>
-  inline Eigen::Vector2f Distort(const Eigen::MatrixBase<Derived>& normalized_point) const {
-    const float r2 = normalized_point.squaredNorm();
-    return normalized_point * (1.0f + r2 * k1_);
+  inline float DistortionFactor(const float r2) const {
+    return 1.0f + r2 * k1_;
   }
   // Returns the derivatives of the image coordinates with respect to the
   // intrinsics. For x and y, 4 values each are returned for f, cx, cy, k.
-  template <typename Derived>
+  template <typename Derived1, typename Derived2>
   inline void NormalizedDerivativeByIntrinsics(
-      const Eigen::MatrixBase<Derived>& normalized_point, float* deriv_x, float* deriv_y) const {
-    const Eigen::Vector2f distorted_point = Distort(normalized_point);
-    
+      const Eigen::MatrixBase<Derived1>& normalized_point, Eigen::MatrixBase<Derived2>& deriv_xy) const {
     const float radius_square = normalized_point.squaredNorm();
-    
-    deriv_x[0] = distorted_point.x();
-    deriv_x[1] = 1.f;
-    deriv_x[2] = 0.f;
-    deriv_x[3] = fx() * normalized_point.x() * radius_square;
-    deriv_y[0] = distorted_point.y();
-    deriv_y[1] = 0.f;
-    deriv_y[2] = 1.f;
-    deriv_y[3] = fy() * normalized_point.y() * radius_square;
+    deriv_xy(0,0) = normalized_point.x() * radius_square;
+    deriv_xy(1,0) = normalized_point.y() * radius_square;
   }
   
   // Derivation with Matlab:
@@ -94,7 +84,7 @@ class SimpleRadialCamera : public CameraBaseImpl<SimpleRadialCamera> {
   // Note: in case of small distortions, you may want to use (1, 0, 0, 1)
   // as an approximation.
   template <typename Derived>
-  inline Eigen::Vector4f DistortionDerivative(const Eigen::MatrixBase<Derived>& normalized_point) const {
+  inline Eigen::Matrix2f DistortionDerivative(const Eigen::MatrixBase<Derived>& normalized_point) const {
     const float nx = normalized_point.x();
     const float ny = normalized_point.y();
     const float nxs = nx * nx;
@@ -105,7 +95,11 @@ class SimpleRadialCamera : public CameraBaseImpl<SimpleRadialCamera> {
     const float ddy_dnx = ddx_dny;
     const float ddy_dny = k1_ * (ru2 + 2 * nys) + 1;
 
-    return Eigen::Vector4f(ddx_dnx, ddx_dny, ddy_dnx, ddy_dny);
+    return (Eigen::Matrix2f() << ddx_dnx, ddx_dny, ddy_dnx, ddy_dny).finished();
+  }
+
+  inline float DistortionDerivative(const float r2) const {
+    return 1.f + 3.f * k1_ * r2;
   }
   
   inline void GetParameters(float* parameters) const {

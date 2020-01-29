@@ -27,23 +27,24 @@
 // POSSIBILITY OF SUCH DAMAGE.
 
 
-#include "camera/camera_radial.h"
+#pragma once
 
+#include <math.h>
+
+#include <Eigen/Core>
 #include <glog/logging.h>
+#include "camera/camera_base.h"
+#include "camera/camera_base_impl.h"
+#include "camera/camera_base_impl_fisheye.h"
+#include "camera/camera_simple_radial.h"
 
 namespace camera {
-RadialCamera::RadialCamera(int width, int height, float fx, float fy,
-                           float cx, float cy, float k1, float k2)
-    : RadialBase(width, height, fx, fy, cx, cy, Type::kRadial),
-      distortion_parameters_(Eigen::Vector2f(k1, k2)) {
-  InitCutoff();
-}
 
-RadialCamera::RadialCamera(int width, int height,
-                                   const float* parameters)
-    : RadialBase(width, height, parameters[0], parameters[1], parameters[2],
-                     parameters[3], Type::kRadial),
-      distortion_parameters_(Eigen::Vector2f(parameters[4], parameters[5])) {
-  InitCutoff();
-}
+class SimpleRadialFisheyeCamera : public FisheyeBase<SimpleRadialCamera, SimpleRadialFisheyeCamera> {
+ public:
+  SimpleRadialFisheyeCamera(int width, int height, float f,
+                            float cx, float cy, float k);
+  
+  SimpleRadialFisheyeCamera(int width, int height, const float* parameters);
+};
 }  // namespace camera

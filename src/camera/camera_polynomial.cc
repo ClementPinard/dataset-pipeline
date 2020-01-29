@@ -35,19 +35,17 @@ namespace camera {
 PolynomialCamera::PolynomialCamera(int width, int height, float fx, float fy,
                                    float cx, float cy, float k1, float k2,
                                    float k3)
-    : CameraBaseImpl(width, height, fx, fy, cx, cy, Type::kPolynomial),
+    : RadialBase(width, height, fx, fy, cx, cy, Type::kPolynomial),
       distortion_parameters_(Eigen::Vector3f(k1, k2, k3)) {
   InitCutoff();
-  InitializeUnprojectionLookup();
 }
 
 PolynomialCamera::PolynomialCamera(int width, int height,
                                    const float* parameters)
-    : CameraBaseImpl(width, height, parameters[0], parameters[1], parameters[2],
+    : RadialBase(width, height, parameters[0], parameters[1], parameters[2],
                      parameters[3], Type::kPolynomial),
       distortion_parameters_(Eigen::Vector3f(parameters[4], parameters[5],
                                          parameters[6])) {
   InitCutoff();
-  InitializeUnprojectionLookup();
 }
 }  // namespace camera

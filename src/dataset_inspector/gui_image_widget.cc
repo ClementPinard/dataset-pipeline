@@ -360,7 +360,7 @@ void ImageWidget::paintEvent(QPaintEvent* event) {
       const ScanPoint& scan_point = scan_points_[i];
       painter.setPen(qRgb(scan_point.r, scan_point.g, scan_point.b));
       painter.drawPoint(
-          QPointF(0.5f + scan_point.image_x, 0.5f + scan_point.image_y));
+          QPointF(0.5f + scan_point.image_p.x(), 0.5f + scan_point.image_p.y()));
     }
   } else if (mode_ == Mode::kOptimizationPoints) {
     painter.setPen(Qt::NoPen);
@@ -370,7 +370,7 @@ void ImageWidget::paintEvent(QPaintEvent* event) {
       const float radius = 2;
       painter.setBrush(QBrush(qRgb(255 * relative_depth, 255 * (1 - relative_depth), 0)));
       painter.drawEllipse(
-          QPointF(0.5f + depth_point.image_x, 0.5f + depth_point.image_y),
+          QPointF(0.5f + depth_point.image_p.x(), 0.5f + depth_point.image_p.y()),
           radius / view_scale_, radius / view_scale_);
     }
   } else if (mode_ == Mode::kCostFixed ||
@@ -402,7 +402,7 @@ void ImageWidget::paintEvent(QPaintEvent* event) {
       const float radius = 2;
       painter.setBrush(QBrush(qRgb(255 * relative_cost, 255 * (1 - relative_cost), 0)));
       painter.drawEllipse(
-          QPointF(0.5f + cost_point.image_x, 0.5f + cost_point.image_y),
+          QPointF(0.5f + cost_point.image_p.x(), 0.5f + cost_point.image_p.y()),
           radius / view_scale_, radius / view_scale_);
     }
   }
@@ -618,14 +618,13 @@ void ImageWidget::UpdateDepthMap(
           ix < image_scale_camera.width() && iy < image_scale_camera.height() &&
           occlusion_image(iy, ix) + opt::GlobalParameters().occlusion_depth_threshold >= image_point.z() &&
           (mask.empty() || mask(iy, ix) != opt::MaskType::kEvalObs)) {
-        Eigen::Vector3f dx, dy;
-        image_scale_camera.ProjectionToImageCoordinatesDerivative(image_point, &dx, &dy);
-        float splat_radius_x = dx.norm() * point_radius;
-        float splat_radius_y = dy.norm() * point_radius;
-        int min_x = std::max(0, int(ix - splat_radius_x + 0.5));
-        int min_y = std::max(0, int(iy - splat_radius_y + 0.5));
-        int end_x = std::min(image_scale_camera.width(), int(ix + splat_radius_x + 1.5));
-        int end_y = std::min(image_scale_camera.height(), int(iy + splat_radius_y + 1.5));
+        Eigen::Matrix<float,2,3> dxy;
+        image_scale_camera.ProjectionToImageCoordinatesDerivative(image_point, dxy);
+        Eigen::Vector2f splat_radius = dxy.rowwise().norm() * point_radius;
+        int min_x = std::max(0, int(ix - splat_radius.x() + 0.5));
+        int min_y = std::max(0, int(iy - splat_radius.y() + 0.5));
+        int end_x = std::min(image_scale_camera.width(), int(ix + splat_radius.x() + 1.5));
+        int end_y = std::min(image_scale_camera.height(), int(iy + splat_radius.y() + 1.5));
         for (int y = min_y; y < end_y; ++ y) {
           for (int x = min_x; x < end_x; ++ x) {
             if(occlusion_image(y, x) + opt::GlobalParameters().occlusion_depth_threshold >= image_point.z())

@@ -27,23 +27,25 @@
 // POSSIBILITY OF SUCH DAMAGE.
 
 
-#include "camera/camera_radial.h"
-
-#include <glog/logging.h>
+#include "camera/camera_thin_prism.h"
 
 namespace camera {
-RadialCamera::RadialCamera(int width, int height, float fx, float fy,
-                           float cx, float cy, float k1, float k2)
-    : RadialBase(width, height, fx, fy, cx, cy, Type::kRadial),
-      distortion_parameters_(Eigen::Vector2f(k1, k2)) {
+
+ThinPrismCamera::ThinPrismCamera(
+    int width, int height, float fx, float fy, float cx, float cy, float k1,
+    float k2, float p1, float p2, float k3, float k4, float sx1, float sy1)
+    : CameraBaseImpl(width, height, fx, fy, cx, cy, Type::kBenchmark),
+      distortion_parameters_{k1, k2, p1, p2, k3, k4, sx1, sy1} {
   InitCutoff();
 }
 
-RadialCamera::RadialCamera(int width, int height,
-                                   const float* parameters)
-    : RadialBase(width, height, parameters[0], parameters[1], parameters[2],
-                     parameters[3], Type::kRadial),
-      distortion_parameters_(Eigen::Vector2f(parameters[4], parameters[5])) {
+ThinPrismCamera::ThinPrismCamera(
+    int width, int height, const float* parameters)
+    : CameraBaseImpl(width, height, parameters[0], parameters[1], parameters[2],
+                     parameters[3], Type::kBenchmark),
+      distortion_parameters_{parameters[4], parameters[5], parameters[6],
+                             parameters[7], parameters[8], parameters[9],
+                             parameters[10], parameters[11]} {
   InitCutoff();
 }
 }  // namespace camera

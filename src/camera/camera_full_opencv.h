@@ -47,10 +47,6 @@ class FullOpenCVCamera : public CameraBaseImpl<FullOpenCVCamera> {
   
   FullOpenCVCamera(int width, int height, const float* parameters);
   
-  inline FullOpenCVCamera* CreateUpdatedCamera(const float* parameters) const {
-    return new FullOpenCVCamera(width_, height_, parameters);
-  }
-  
   static constexpr int ParameterCount() {
     return 4 + 2 + 6;
   }
@@ -84,17 +80,15 @@ class FullOpenCVCamera : public CameraBaseImpl<FullOpenCVCamera> {
   // Returns the derivatives of the image coordinates with respect to the
   // intrinsics. For x and y, 11 values each are returned for fx, fy, cx, cy,
   // k1, k2, k3, k4, k5, k6, p1, p2.
-  template <typename Derived>
+  template <typename Derived1, typename Derived2>
   inline void NormalizedDerivativeByIntrinsics(
-      const Eigen::MatrixBase<Derived>& normalized_point, float* deriv_x, float* deriv_y) const {
+      const Eigen::MatrixBase<Derived1>& normalized_point, Eigen::MatrixBase<Derived2>& deriv_xy) const {
     const float k1 = distortion_parameters_[0];
     const float k2 = distortion_parameters_[1];
     const float k3 = distortion_parameters_[4];
     const float k4 = distortion_parameters_[5];
     const float k5 = distortion_parameters_[6];
     const float k6 = distortion_parameters_[7];
-
-    const Eigen::Vector2f distorted_point = Distort(normalized_point);
     
     const float nx = normalized_point.x();
     const float ny = normalized_point.y();
@@ -103,41 +97,34 @@ class FullOpenCVCamera : public CameraBaseImpl<FullOpenCVCamera> {
     const float r2 = x2 + y2;
     const float r4 = r2 * r2;
     const float r6 = r4 * r2;
-    const float fx_nx = nx * fx();
-    const float fy_ny = ny * fy();
 
     const float radial_numerator = 1.f + k1 * r2 + k2 * r4 + k3 * r6;
     const float radial_denominator = 1.f + k4 * r2 + k5 * r4 + k6 * r6;
     const float radial = radial_numerator / radial_denominator;
+
+    float* deriv_x = deriv_xy.row(0).data();
+    float* deriv_y = deriv_xy.row(1).data();
     
-    deriv_x[0] = distorted_point.x();
-    deriv_x[1] = 0.f;
-    deriv_x[2] = 1.f;
-    deriv_x[3] = 0.f;
-    deriv_x[4] = fx_nx * r2 / radial_denominator;
-    deriv_x[5] = fx_nx * r4 / radial_denominator;
-    deriv_x[6] = fx_nx * 2.f * ny;
-    deriv_x[7] = fx() * (r2 + 2*x2);
-    deriv_x[8] = fx_nx * r6 /radial_denominator;
-    deriv_x[9] = -fx_nx * r2 * radial / radial_denominator;
-    deriv_x[10] = -fx_nx * r4 * radial / radial_denominator;
-    deriv_x[11] = -fx_nx * r6 * radial / radial_denominator;
-    deriv_y[0] = 0.f;
-    deriv_y[1] = distorted_point.y();
-    deriv_y[2] = 0.f;
-    deriv_y[3] = 1.f;
-    deriv_y[4] = fy_ny * r2 / radial_denominator;
-    deriv_y[5] = fy_ny * r4 / radial_denominator;
-    deriv_y[6] = fy() * (r2 + 2*y2);
-    deriv_y[7] = fy_ny * 2.f * nx;
-    deriv_y[8] = fy_ny * r6 /radial_denominator;
-    deriv_y[9] = -fy_ny * r2 * radial / radial_denominator;
-    deriv_y[10] = -fy_ny * r4 * radial / radial_denominator;
-    deriv_y[11] = -fy_ny * r6 * radial / radial_denominator;
+    deriv_x[0] = nx * r2 / radial_denominator;
+    deriv_x[1] = nx * r4 / radial_denominator;
+    deriv_x[2] = nx * 2.f * ny;
+    deriv_x[3] = (r2 + 2*x2);
+    deriv_x[4] = nx * r6 /radial_denominator;
+    deriv_x[5] = -nx * r2 * radial / radial_denominator;
+    deriv_x[6] = -nx * r4 * radial / radial_denominator;
+    deriv_x[7] = -nx * r6 * radial / radial_denominator;
+    deriv_y[0] = ny * r2 / radial_denominator;
+    deriv_y[1] = ny * r4 / radial_denominator;
+    deriv_y[2] = (r2 + 2*y2);
+    deriv_y[3] = ny * 2.f * nx;
+    deriv_y[4] = ny * r6 /radial_denominator;
+    deriv_y[5] = -ny * r2 * radial / radial_denominator;
+    deriv_y[6] = -ny * r4 * radial / radial_denominator;
+    deriv_y[7] = -ny * r6 * radial / radial_denominator;
   }
 
   template <typename Derived>
-  inline Eigen::Vector4f DistortionDerivative(const Eigen::MatrixBase<Derived>& normalized_point) const {
+  inline Eigen::Matrix2f DistortionDerivative(const Eigen::MatrixBase<Derived>& normalized_point) const {
     const float k1 = distortion_parameters_[0];
     const float k2 = distortion_parameters_[1];
     const float p1 = distortion_parameters_[2];
@@ -181,7 +168,7 @@ class FullOpenCVCamera : public CameraBaseImpl<FullOpenCVCamera> {
     const float ddx_dny = xy*d_radial + d_tan_x_ny;
 
     
-    return Eigen::Vector4f(ddx_dnx, ddx_dny, ddy_dnx, ddy_dny);
+    return (Eigen::Matrix2f() << ddx_dnx, ddx_dny, ddy_dnx, ddy_dny).finished();
   }
   
   inline void GetParameters(float* parameters) const {

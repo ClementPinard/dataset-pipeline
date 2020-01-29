@@ -43,10 +43,6 @@ class PinholeCamera : public CameraBaseImpl<PinholeCamera> {
   
   PinholeCamera(int width, int height, const float* parameters);
   
-  inline PinholeCamera* CreateUpdatedCamera(const float* parameters) const {
-    return new PinholeCamera(width_, height_, parameters);
-  }
-  
   static constexpr int ParameterCount() {
     return 4;
   }
@@ -72,22 +68,13 @@ class PinholeCamera : public CameraBaseImpl<PinholeCamera> {
 
   // Returns the derivatives of the image coordinates with respect to the
   // intrinsics. For x and y, 4 values each are returned for fx, fy, cx, cy.
-  template <typename Derived>
+  template <typename Derived1, typename Derived2>
   inline void NormalizedDerivativeByIntrinsics(
-      const Eigen::MatrixBase<Derived>& normalized_point, float* deriv_x, float* deriv_y) const {
-    deriv_x[0] = normalized_point.x();
-    deriv_x[1] = 0.f;
-    deriv_x[2] = 1.f;
-    deriv_x[3] = 0.f;
-    deriv_y[0] = 0.f;
-    deriv_y[1] = normalized_point.y();
-    deriv_y[2] = 0.f;
-    deriv_y[3] = 1.f;
-  }
+      const Eigen::MatrixBase<Derived1>& normalized_point, Eigen::MatrixBase<Derived2>& deriv_xy) const {}
   
   template <typename Derived>
-  inline Eigen::Vector4f DistortionDerivative(const Eigen::MatrixBase<Derived>& /*normalized_point*/) const {
-    return Eigen::Vector4f(1, 0, 0, 1);
+  inline Eigen::Matrix2f DistortionDerivative(const Eigen::MatrixBase<Derived>& /*normalized_point*/) const {
+    return (Eigen::Matrix2f() << 1, 0, 0, 1).finished();
   }
   
   inline void GetParameters(float* parameters) const {

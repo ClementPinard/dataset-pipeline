@@ -38,7 +38,6 @@ PolynomialTangentialCamera::PolynomialTangentialCamera(
     : CameraBaseImpl(width, height, fx, fy, cx, cy, Type::kPolynomialTangential),
       distortion_parameters_(Eigen::Vector4f(k1, k2, p1, p2)) {
   InitCutoff();
-  InitializeUnprojectionLookup();
 }
 
 PolynomialTangentialCamera::PolynomialTangentialCamera(int width, int height,
@@ -48,6 +47,5 @@ PolynomialTangentialCamera::PolynomialTangentialCamera(int width, int height,
       distortion_parameters_(Eigen::Vector4f(parameters[4], parameters[5],
                                              parameters[6], parameters[7])) {
   InitCutoff();
-  InitializeUnprojectionLookup();
 }
 }  // namespace camera

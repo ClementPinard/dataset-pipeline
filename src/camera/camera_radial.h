@@ -35,94 +35,69 @@
 
 #include "camera/camera_base.h"
 #include "camera/camera_base_impl.h"
+#include "camera/camera_base_impl_radial.h"
 
 namespace camera {
 
 // Models pinhole cameras with a polynomial distortion model.
-class RadialCamera : public CameraBaseImpl<RadialCamera> {
+class RadialCamera : public RadialBase<RadialCamera> {
  public:
   RadialCamera(int width, int height, float fx, float fy, float cx,
                    float cy, float k1, float k2);
   
   RadialCamera(int width, int height, const float* parameters);
   
-  inline RadialCamera* CreateUpdatedCamera(const float* parameters) const {
-    return new RadialCamera(width_, height_, parameters);
-  }
-  
   static constexpr int ParameterCount() {
     return 4 + 2;
   }
 
-  template <typename Derived>
-  inline Eigen::Vector2f Distort(const Eigen::MatrixBase<Derived>& normalized_point) const {
+  inline float DistortionFactor(const float r2) const {
     const float k1 = distortion_parameters_.x();
     const float k2 = distortion_parameters_.y();
-    const float r2 = normalized_point.squaredNorm();
 
-    const float radial = 1.0f + r2 * (k1 + r2 * k2);
-    return normalized_point * radial;
+    return 1.0f + r2 * (k1 + r2 * k2);
   }
 
   // Returns the derivatives of the image coordinates with respect to the
   // intrinsics. For x and y, 7 values each are returned for fx, fy, cx, cy,
   // k1, k2.
-  template <typename Derived>
+  template <typename Derived1, typename Derived2>
   inline void NormalizedDerivativeByIntrinsics(
-      const Eigen::MatrixBase<Derived>& normalized_point, float* deriv_x, float* deriv_y) const {
-    const Eigen::Vector2f distorted_point = Distort(normalized_point);
-    
+      const Eigen::MatrixBase<Derived1>& normalized_point, Eigen::MatrixBase<Derived2>& deriv_xy) const {
     const float radius_square = normalized_point.squaredNorm();
     
-    deriv_x[0] = distorted_point.x();
-    deriv_x[1] = 0.f;
-    deriv_x[2] = 1.f;
-    deriv_x[3] = 0.f;
-    deriv_x[4] = fx() * normalized_point.x() * radius_square;
-    deriv_x[5] = deriv_x[4] * radius_square;
-    deriv_y[0] = 0.f;
-    deriv_y[1] = distorted_point.y();
-    deriv_y[2] = 0.f;
-    deriv_y[3] = 1.f;
-    deriv_y[4] = fy() * normalized_point.y() * radius_square;
-    deriv_y[5] = deriv_y[4] * radius_square;
+    deriv_xy(0,0) = normalized_point.x() * radius_square;
+    deriv_xy(0,1) = deriv_xy(0,0) * radius_square;
+    deriv_xy(1,0) = normalized_point.y() * radius_square;
+    deriv_xy(1,1) = deriv_xy(1,0) * radius_square;
   }
-  
-  // Derivation with Matlab:
-  // syms nx ny px py pz
-  // ru2 = nx*nx + ny*ny
-  // factw = 1 + ru2 * (px + ru2 * py)
-  // simplify(diff(nx * factw, nx))
-  // simplify(diff(nx * factw, ny))
-  // simplify(diff(ny * factw, nx))
-  // simplify(diff(ny * factw, ny))
-  // Returns (ddx/dnx, ddx/dny, ddy/dnx, ddy/dny) as in above order,
-  // with dx,dy being the distorted coords and d the partial derivative
-  // operator.
-  // Note: in case of small distortions, you may want to use (1, 0, 0, 1)
-  // as an approximation.
+
   template <typename Derived>
-  inline Eigen::Vector4f DistortionDerivative(const Eigen::MatrixBase<Derived>& normalized_point) const {
+  inline Eigen::Matrix2f DistortionDerivative(const Eigen::MatrixBase<Derived>& normalized_point) const {
+    const float k1 = distortion_parameters_.x();
+    const float k2 = distortion_parameters_.y();
+
     const float nx = normalized_point.x();
     const float ny = normalized_point.y();
-    const float nxs = nx * nx;
-    const float nys = ny * ny;
-    const float nxs_plus_nxy = nxs + nys;
+    const float nx2 = nx * nx;
+    const float ny2 = ny * ny;
+    const float nxny = nx * ny;
+    const float r2 = nx2 + ny2;
 
-    const float part1 = distortion_parameters_.y();
-    const float part2 = distortion_parameters_.x() + part1 * nxs_plus_nxy;
-    const float part3 =
-        (2 * ny * part1) * nxs_plus_nxy +
-        2 * ny * part2;
-
-    const float ddx_dnx =
-        nx * ((2 * nx * part1) * nxs_plus_nxy + 2 * nx * part2) +
-        part2 * nxs_plus_nxy + 1;
-    const float ddx_dny = nx * part3;
+    const float term1 = 2*k1 + r2 * (4*k2);
+    const float term2 = 1 + r2 * (k1 + r2*(k2));
+    const float ddx_dnx = nx2 * term1 + term2;
+    const float ddx_dny = nxny * term1;
     const float ddy_dnx = ddx_dny;
-    const float ddy_dny = ny * part3 + part2 * nxs_plus_nxy + 1;
+    const float ddy_dny = ny2 * term1 + term2;
 
-    return Eigen::Vector4f(ddx_dnx, ddx_dny, ddy_dnx, ddy_dny);
+    return (Eigen::Matrix2f() << ddx_dnx, ddx_dny, ddy_dnx, ddy_dny).finished();
+  }
+
+  inline float DistortionDerivative(const float r2) const {
+    const float k1 = distortion_parameters_.x();
+    const float k2 = distortion_parameters_.y();
+    return 1.f + r2 * (3.f * k1 + r2 * 5.f * k2) ;
   }
   
   inline void GetParameters(float* parameters) const {

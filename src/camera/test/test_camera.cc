@@ -39,7 +39,7 @@
 namespace {
 template <typename Camera>
 void UndistortAndDistortImageCornersTest(const Camera& test_camera) {
-  constexpr bool kShowDebugImages = true;
+  constexpr bool kShowDebugImages = false;
   // Test the corners of the image.
   std::vector<Eigen::Vector2f, Eigen::aligned_allocator<Eigen::Vector2f>> test_points;
   test_points.push_back(Eigen::Vector2f(0, 0));
@@ -143,8 +143,8 @@ template <typename Camera>
 void NumericalProjectionToNormalizedTextureCoordinatesDerivative(
     const Camera& camera,
     const Eigen::Vector3f& at,
-    Eigen::Vector3f* out_x,
-    Eigen::Vector3f* out_y) {
+    Eigen::Vector3f& out_x,
+    Eigen::Vector3f& out_y) {
   const float kStep = 0.001f;
   const float kTwoSteps = 2 * kStep;
   
@@ -169,10 +169,10 @@ void NumericalProjectionToNormalizedTextureCoordinatesDerivative(
   Eigen::Vector2f proj_minus_z = camera.ProjectToNormalizedTextureCoordinates(
       Eigen::Vector2f(at_minus_z.x() / at_minus_z.z(), at_minus_z.y() / at_minus_z.z()));
   
-  *out_x = Eigen::Vector3f((proj_plus_x.x() - proj_minus_x.x()) / kTwoSteps,
+  out_x = Eigen::Vector3f((proj_plus_x.x() - proj_minus_x.x()) / kTwoSteps,
                            (proj_plus_y.x() - proj_minus_y.x()) / kTwoSteps,
                            (proj_plus_z.x() - proj_minus_z.x()) / kTwoSteps);
-  *out_y = Eigen::Vector3f((proj_plus_x.y() - proj_minus_x.y()) / kTwoSteps,
+  out_y = Eigen::Vector3f((proj_plus_x.y() - proj_minus_x.y()) / kTwoSteps,
                            (proj_plus_y.y() - proj_minus_y.y()) / kTwoSteps,
                            (proj_plus_z.y() - proj_minus_z.y()) / kTwoSteps);
 }
@@ -181,26 +181,26 @@ template <typename Camera>
 void CheckProjectionToNormalizedTextureCoordinatesDerivative(
     const Camera& camera,
     const Eigen::Vector3f& at) {
-  Eigen::Vector3f result_x, result_y;
-  camera.ProjectionToNormalizedTextureCoordinatesDerivative(at, &result_x, &result_y);
+  Eigen::Matrix<float, 2, 3> result_xy;
+  camera.ProjectionToNormalizedTextureCoordinatesDerivative(at, result_xy);
   Eigen::Vector3f numerical_x, numerical_y;
-  NumericalProjectionToNormalizedTextureCoordinatesDerivative(camera, at, &numerical_x,
-                                            &numerical_y);
+  NumericalProjectionToNormalizedTextureCoordinatesDerivative(camera, at, numerical_x,
+                                            numerical_y);
   
-  EXPECT_NEAR(result_x.x(), numerical_x.x(), 1e-3f);
-  EXPECT_NEAR(result_x.y(), numerical_x.y(), 1e-3f);
-  EXPECT_NEAR(result_x.z(), numerical_x.z(), 1e-3f);
-  EXPECT_NEAR(result_y.x(), numerical_y.x(), 1e-3f);
-  EXPECT_NEAR(result_y.y(), numerical_y.y(), 1e-3f);
-  EXPECT_NEAR(result_y.z(), numerical_y.z(), 1e-3f);
+  EXPECT_NEAR(result_xy(0,0), numerical_x.x(), 1e-3f);
+  EXPECT_NEAR(result_xy(0,1), numerical_x.y(), 1e-3f);
+  EXPECT_NEAR(result_xy(0,2), numerical_x.z(), 1e-3f);
+  EXPECT_NEAR(result_xy(1,0), numerical_y.x(), 1e-3f);
+  EXPECT_NEAR(result_xy(1,1), numerical_y.y(), 1e-3f);
+  EXPECT_NEAR(result_xy(1,2), numerical_y.z(), 1e-3f);
 }
 
 template <typename Camera>
 void NumericalProjectionToImageCoordinatesDerivative(
     const Camera& camera,
     const Eigen::Vector3f& at,
-    Eigen::Vector3f* out_x,
-    Eigen::Vector3f* out_y) {
+    Eigen::Vector3f& out_x,
+    Eigen::Vector3f& out_y) {
   const float kStep = 0.001f;
   const float kTwoSteps = 2 * kStep;
   
@@ -225,10 +225,10 @@ void NumericalProjectionToImageCoordinatesDerivative(
   Eigen::Vector2f proj_minus_z = camera.ProjectToImageCoordinates(
       Eigen::Vector2f(at_minus_z.x() / at_minus_z.z(), at_minus_z.y() / at_minus_z.z()));
   
-  *out_x = Eigen::Vector3f((proj_plus_x.x() - proj_minus_x.x()) / kTwoSteps,
+  out_x = Eigen::Vector3f((proj_plus_x.x() - proj_minus_x.x()) / kTwoSteps,
                            (proj_plus_y.x() - proj_minus_y.x()) / kTwoSteps,
                            (proj_plus_z.x() - proj_minus_z.x()) / kTwoSteps);
-  *out_y = Eigen::Vector3f((proj_plus_x.y() - proj_minus_x.y()) / kTwoSteps,
+  out_y = Eigen::Vector3f((proj_plus_x.y() - proj_minus_x.y()) / kTwoSteps,
                            (proj_plus_y.y() - proj_minus_y.y()) / kTwoSteps,
                            (proj_plus_z.y() - proj_minus_z.y()) / kTwoSteps);
 }
@@ -236,19 +236,19 @@ void NumericalProjectionToImageCoordinatesDerivative(
 template <typename Camera>
 void CheckProjectionToImageCoordinatesDerivative(const Camera& camera,
                                                  const Eigen::Vector3f& at) {
-  Eigen::Vector3f result_x, result_y;
-  camera.ProjectionToImageCoordinatesDerivative(at, &result_x, &result_y);
+  Eigen::Matrix<float, 2, 3> result_xy;
+  camera.ProjectionToImageCoordinatesDerivative(at, result_xy);
   Eigen::Vector3f numerical_x, numerical_y;
-  NumericalProjectionToImageCoordinatesDerivative(camera, at, &numerical_x,
-                                                  &numerical_y);
+  NumericalProjectionToImageCoordinatesDerivative(camera, at, numerical_x,
+                                                  numerical_y);
   
-  EXPECT_NEAR(result_x.x(), numerical_x.x(), 250 * 1e-3f)
+  EXPECT_NEAR(result_xy(0,0), numerical_x.x(), 250 * 1e-3f)
       << "Test failed for point " << at.x() << ", " << at.y() << ", " << at.z();
-  EXPECT_NEAR(result_x.y(), numerical_x.y(), 250 * 1e-3f);
-  EXPECT_NEAR(result_x.z(), numerical_x.z(), 250 * 1e-3f);
-  EXPECT_NEAR(result_y.x(), numerical_y.x(), 250 * 1e-3f);
-  EXPECT_NEAR(result_y.y(), numerical_y.y(), 250 * 1e-3f);
-  EXPECT_NEAR(result_y.z(), numerical_y.z(), 250 * 1e-3f);
+  EXPECT_NEAR(result_xy(0,1), numerical_x.y(), 250 * 1e-3f);
+  EXPECT_NEAR(result_xy(0,2), numerical_x.z(), 250 * 1e-3f);
+  EXPECT_NEAR(result_xy(1,0), numerical_y.x(), 250 * 1e-3f);
+  EXPECT_NEAR(result_xy(1,1), numerical_y.y(), 250 * 1e-3f);
+  EXPECT_NEAR(result_xy(1,2), numerical_y.z(), 250 * 1e-3f);
 }
 
 template <typename Camera>
@@ -316,7 +316,8 @@ void TestProjectionToImageCoordinatesDerivativeByIntrinsics(
       Eigen::Vector3f(1.0f, 2.5f, 4.0f),
       Eigen::Vector3f(1.0f, 3.0f, 8.0f),
       Eigen::Vector3f(-0.1f, 0.4f, 0.8f)};
-  float result_x[kNumParameters], result_y[kNumParameters];
+      Eigen::Matrix<float, 2, kNumParameters, Eigen::RowMajor>
+      deriv_xy;
   for (unsigned int i = 0; i < sizeof(kTest3DPoints) / sizeof(kTest3DPoints[0]); ++i) {
     const float nx = kTest3DPoints[i].x() / kTest3DPoints[i].z();
     const float ny = kTest3DPoints[i].y() / kTest3DPoints[i].z();
@@ -330,7 +331,7 @@ void TestProjectionToImageCoordinatesDerivativeByIntrinsics(
     }
     
     camera.ProjectionToImageCoordinatesDerivativeByIntrinsics(
-        kTest3DPoints[i], result_x, result_y);
+        kTest3DPoints[i], deriv_xy);
     
     float numerical_x, numerical_y;
     float delta[kNumParameters];
@@ -341,9 +342,9 @@ void TestProjectionToImageCoordinatesDerivativeByIntrinsics(
           camera, nx, ny, delta, &numerical_x, &numerical_y);
       delta[c] = 0;
       
-      EXPECT_NEAR(result_x[c], numerical_x, 2.5e-3f)
+      EXPECT_NEAR(deriv_xy(0,c), numerical_x, 2.5e-3f)
           << "Failure for point " << i << ", component " << c;
-      EXPECT_NEAR(result_y[c], numerical_y, 2.5e-3f)
+      EXPECT_NEAR(deriv_xy(1,c), numerical_y, 2.5e-3f)
           << "Failure for point " << i << ", component " << c;
     }
   }
@@ -445,10 +446,22 @@ TEST(Camera, Radial) {
   RunCameraModelTests(radial_camera);
 }
 
+TEST(Camera, RadialFisheye) {
+  camera::RadialFisheyeCamera radial_fisheye_camera(kImageWidth, kImageHeight, kFX,
+                                                    kFY, kCX, kCY, kK1, -kK2);
+  RunCameraModelTests(radial_fisheye_camera);
+}
+
 TEST(Camera, SimpleRadial) {
   camera::SimpleRadialCamera simple_radial_camera(kImageWidth, kImageHeight, 450,
                                              kCX, kCY, kK1);
   RunCameraModelTests(simple_radial_camera);
+}
+
+TEST(Camera, SimpleRadialFisheye) {
+  camera::SimpleRadialFisheyeCamera simple_radial_fisheye_camera(kImageWidth, kImageHeight, 450,
+                                                                 kCX, kCY, kK1);
+  RunCameraModelTests(simple_radial_fisheye_camera);
 }
 
 TEST(Camera, Polynomial) {

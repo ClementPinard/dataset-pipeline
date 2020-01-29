@@ -32,6 +32,9 @@
 #include <math.h>
 
 #include <Eigen/Core>
+#include <Eigen/Dense>
+#include <algorithm>
+
 #include <glog/logging.h>
 #include <cstddef>
 
@@ -43,12 +46,10 @@ namespace camera {
 template <class Child> class CameraBaseImpl : public CameraBase {
  public:
   
-  CameraBaseImpl(int width, int height, float fx, float fy, float cx, float cy, Type type)
+  CameraBaseImpl(int width, int height, float fx, float fy, float cx, float cy, CameraBase::Type type)
   : CameraBase(width, height, fx, fy, cx, cy, type),
     undistortion_lookup_(nullptr),
-    radius_cutoff_squared_(std::numeric_limits<float>::infinity()){
-
-    }
+    radius_cutoff_squared_(std::numeric_limits<float>::infinity()){}
   
   ~CameraBaseImpl() {
   delete[] undistortion_lookup_;
@@ -101,16 +102,29 @@ template <class Child> class CameraBaseImpl : public CameraBase {
     return new Child(width_, height_, parameters);
   }
 
+  template<typename Derived>
+  inline Eigen::Vector2f ImagePlaneToWorld(const Eigen::MatrixBase<Derived>& image_point) const {
+    return f_inv().asDiagonal() * image_point + c_inv();
+  }
+
+  template<typename Derived>
+  inline Eigen::Vector2f WorldToImagePlane(const Eigen::MatrixBase<Derived>& point) const {
+    return f().asDiagonal() * point + c();
+  }
+
+  template<typename Derived>
+  inline Eigen::Vector2f WorldToTexturePlane(const Eigen::MatrixBase<Derived>& image_point) const {
+    return nf().asDiagonal() * image_point + nc();
+  }
+
   template <typename Derived>
   inline Eigen::Vector2f ProjectToNormalizedTextureCoordinates(const Eigen::MatrixBase<Derived>& normalized_point) const {
     const float r2 = normalized_point.squaredNorm();
     if (isinf(r2) || r2 > radius_cutoff_squared_) {
-      return Eigen::Vector2f(normalized_point.x() * std::numeric_limits<float>::infinity(),
-                             normalized_point.y() * std::numeric_limits<float>::infinity());
+      return normalized_point * std::numeric_limits<float>::infinity();
     }else{
       const Eigen::Vector2f distorted_point = static_cast<const Child*>(this)->Distort(normalized_point);
-      return Eigen::Vector2f(nfx() * distorted_point.x() + ncx(),
-                             nfy() * distorted_point.y() + ncy());
+      return WorldToTexturePlane(distorted_point);
     }
   }
   
@@ -118,23 +132,21 @@ template <class Child> class CameraBaseImpl : public CameraBase {
   inline Eigen::Vector2f ProjectToImageCoordinates(const Eigen::MatrixBase<Derived>& normalized_point) const {
     const float r2 = normalized_point.squaredNorm();
     if (isinf(r2) || r2 > radius_cutoff_squared_) {
-      return Eigen::Vector2f(normalized_point.x() * std::numeric_limits<float>::infinity(),
-                             normalized_point.y() * std::numeric_limits<float>::infinity());
+      return normalized_point * std::numeric_limits<float>::infinity();
     }else{
       const Eigen::Vector2f distorted_point = static_cast<const Child*>(this)->Distort(normalized_point);
-      return Eigen::Vector2f(fx() * distorted_point.x() + cx(),
-                             fy() * distorted_point.y() + cy());
+      return WorldToImagePlane(distorted_point);
     }
   }
 
   inline Eigen::Vector2f UnprojectFromImageCoordinates(const int x, const int y) const {
+    Eigen::Vector2i clamped_pixel(
+        std::max(0, std::min(width() - 1, x)),
+        std::max(0, std::min(height() - 1, y)));
     if(undistortion_lookup_){
-      Eigen::Vector2i clamped_pixel(
-          std::max(0, std::min(width() - 1, x)),
-          std::max(0, std::min(height() - 1, y)));
-      return undistortion_lookup_[clamped_pixel.y() * width_ + clamped_pixel.x()];
+      return undistortionLookup(clamped_pixel.x(), clamped_pixel.y());
     }else{
-      return Undistort(Eigen::Vector2f(fx_inv() * x + cx_inv(), fy_inv() * y + cy_inv()));
+      return Undistort(ImagePlaneToWorld(clamped_pixel.cast<float>()));
     }
   }
 
@@ -142,19 +154,13 @@ template <class Child> class CameraBaseImpl : public CameraBase {
   inline Eigen::Vector2f UnprojectFromImageCoordinates(const Eigen::MatrixBase<Derived>& pixel_position) const {
     // Manual implementation of bilinearly filtering the lookup.
     if(undistortion_lookup_){
-      Eigen::Vector2f clamped_pixel = Eigen::Vector2f(
-          std::max(0.f, std::min(width() - 1.001f, pixel_position.x())),
-          std::max(0.f, std::min(height() - 1.001f, pixel_position.y())));
-      Eigen::Vector2i int_pos = Eigen::Vector2i(clamped_pixel.x(), clamped_pixel.y());
-      Eigen::Vector2f factor =
-          Eigen::Vector2f(clamped_pixel.x() - int_pos.x(), clamped_pixel.y() - int_pos.y());
-      Eigen::Vector2f top_left = undistortion_lookup_[int_pos.y() * width_ + int_pos.x()];
-      Eigen::Vector2f top_right =
-          undistortion_lookup_[int_pos.y() * width_ + (int_pos.x() + 1)];
-      Eigen::Vector2f bottom_left =
-          undistortion_lookup_[(int_pos.y() + 1) * width_ + int_pos.x()];
-      Eigen::Vector2f bottom_right =
-          undistortion_lookup_[(int_pos.y() + 1) * width_ + (int_pos.x() + 1)];
+      Eigen::Vector2f clamped_pixel = pixel_position.cwiseMin(Eigen::Vector2f(width_ - 1.001f, height_ - 1.00f)).cwiseMax(0);
+      Eigen::Vector2i int_pos = clamped_pixel.cast<int>();
+      Eigen::Vector2f factor = clamped_pixel - int_pos.cast<float>();
+      Eigen::Vector2f top_left = undistortionLookup(int_pos.x(), int_pos.y());
+      Eigen::Vector2f top_right = undistortionLookup(int_pos.x() + 1, int_pos.y());
+      Eigen::Vector2f bottom_left = undistortionLookup(int_pos.x(), int_pos.y() + 1);
+      Eigen::Vector2f bottom_right = undistortionLookup(int_pos.x() + 1, int_pos.y() + 1);
       return Eigen::Vector2f(
           (1 - factor.y()) *
                   ((1 - factor.x()) * top_left.x() + factor.x() * top_right.x()) +
@@ -165,8 +171,7 @@ template <class Child> class CameraBaseImpl : public CameraBase {
               factor.y() *
                   ((1 - factor.x()) * bottom_left.y() + factor.x() * bottom_right.y()));
     }else{
-      return Undistort(Eigen::Vector2f(fx_inv() * pixel_position.x() + cx_inv(),
-                                       fy_inv() * pixel_position.y() + cy_inv()));
+      return Undistort(ImagePlaneToWorld(pixel_position));
     }
   }
 
@@ -174,9 +179,9 @@ template <class Child> class CameraBaseImpl : public CameraBase {
   // time critical code. An undistortion texture may be preferable,
   // as used by the UnprojectFromImageCoordinates() methods. Undistort() is only
   // used for calculating this undistortion texture once.
-  template <typename Derived>
-  inline Eigen::Vector2f IterativeUndistort(const Eigen::MatrixBase<Derived>& distorted_point,
-                                            float uu, float vv, bool* converged) const {
+  template <typename Derived1, typename Derived2>
+  inline Eigen::Vector2f IterativeUndistort(const Eigen::MatrixBase<Derived1>& distorted_point,
+                                            const Eigen::MatrixBase<Derived2>& starting_point, bool* converged) const {
     const std::size_t kNumUndistortionIterations = 100;
     const Child* child = static_cast<const Child*>(this);
 
@@ -185,28 +190,18 @@ template <class Child> class CameraBaseImpl : public CameraBase {
     if (converged) {
       *converged = false;
     }
+    Eigen::Vector2f undistorted = starting_point;
     for (std::size_t i = 0; i < kNumUndistortionIterations; ++i) {
-      Eigen::Vector2f distorted = child->Distort(Eigen::Vector2f(uu, vv));
+      Eigen::Vector2f distorted_candidate = child->Distort(undistorted);
       // (Non-squared) residuals.
-      float dx = distorted.x() - distorted_point.x();
-      float dy = distorted.y() - distorted_point.y();
+      Eigen::Vector2f delta_point = distorted_candidate - distorted_point;
       
       // Accumulate H and b.
-      Eigen::Vector4f ddxy_dxy = child->DistortionDerivative(Eigen::Vector2f(uu, vv));
-      float H_0_0 = ddxy_dxy.x() * ddxy_dxy.x() + ddxy_dxy.z() * ddxy_dxy.z();
-      float H_1_0_and_0_1 = ddxy_dxy.x() * ddxy_dxy.y() + ddxy_dxy.z() * ddxy_dxy.w();
-      float H_1_1 = ddxy_dxy.y() * ddxy_dxy.y() + ddxy_dxy.w() * ddxy_dxy.w();
-      float b_0 = dx * ddxy_dxy.x() + dy * ddxy_dxy.z();
-      float b_1 = dx * ddxy_dxy.y() + dy * ddxy_dxy.w();
-      
-      // Solve the system and update the parameters.
-      float x_1 = (b_1 - H_1_0_and_0_1 / H_0_0 * b_0) /
-                  (H_1_1 - H_1_0_and_0_1 * H_1_0_and_0_1 / H_0_0);
-      float x_0 = (b_0 - H_1_0_and_0_1 * x_1) / H_0_0;
-      uu -= x_0;
-      vv -= x_1;
-      
-      if (dx * dx + dy * dy < kUndistortionEpsilon) {
+      const Eigen::Matrix2f Jd = child->DistortionDerivative(undistorted);
+      const Eigen::Matrix2f Jd2 = Jd.transpose() * Jd;
+      const Eigen::Vector2f step = (Jd2.inverse() * Jd) * delta_point;
+      undistorted.noalias() -= step;      
+      if (step.squaredNorm() < kUndistortionEpsilon) {
         if (converged) {
           *converged = true;
         }
@@ -214,24 +209,32 @@ template <class Child> class CameraBaseImpl : public CameraBase {
       }
     }
     
-    return Eigen::Vector2f(uu, vv);
+    return undistorted;
   }
 
   template <typename Derived>
   inline Eigen::Vector2f Undistort(const Eigen::MatrixBase<Derived>& distorted_point) const {
-    return IterativeUndistort(distorted_point, distorted_point.x(), distorted_point.y(), nullptr);
+    return IterativeUndistort(distorted_point, distorted_point, nullptr);
   }
 
   void InitializeUnprojectionLookup() {
-    undistortion_lookup_ = new Eigen::Vector2f[height() * width()];
-    Eigen::Vector2f* ptr = undistortion_lookup_;
-    for (int y = 0; y < height(); ++y) {
-      for (int x = 0; x < width(); ++x) {
-        *ptr = Undistort(
-            Eigen::Vector2f(fx_inv() * x + cx_inv(), fy_inv() * y + cy_inv()));
-        ++ptr;
+    if(undistortion_lookup_){
+      return;
+    }else{
+      undistortion_lookup_ = new Eigen::Vector2f[height() * width()];
+      Eigen::Vector2f* ptr = undistortion_lookup_;
+      for (int y = 0; y < height(); ++y) {
+        for (int x = 0; x < width(); ++x) {
+          *ptr = Undistort(
+              Eigen::Vector2f(f_inv().x() * x + c_inv().x(), f_inv().y() * y + c_inv().y()));
+          ++ptr;
+        }
       }
     }
+  }
+
+  inline Eigen::Vector2f undistortionLookup(const int x, const int y) const{
+    return undistortion_lookup_[x + width_ * y];
   }
 
   // Tries to return the innermost undistorted point which maps to the given
@@ -244,7 +247,9 @@ template <class Child> class CameraBaseImpl : public CameraBase {
       Eigen::MatrixBase<Derived2>* second_best_result,
       bool* second_best_available) const {
     // Try different initialization points and take the result with the smallest
-    // radius.
+    // radius. Since this should be the only acceptable one, also store the second
+    // smallest result. Thus we know the radius cutoff should be between the two
+    // 
     constexpr int kNumGridSteps = 10;
     constexpr float kGridHalfExtent = 1.5f;
     constexpr float kImproveThreshold = 0.99f;
@@ -255,16 +260,17 @@ template <class Child> class CameraBaseImpl : public CameraBase {
     float best_radius = std::numeric_limits<float>::infinity();
     Eigen::Vector2f best_result;
     float second_best_radius = std::numeric_limits<float>::infinity();
+    Eigen::Vector2f init_point;
     
     for (int y = 0; y < kNumGridSteps; ++ y) {
-      float y_init = distorted_point.y() + kGridHalfExtent * (y - 0.5f * kNumGridSteps) / (0.5f * kNumGridSteps);
+      init_point.y() = distorted_point.y() + kGridHalfExtent * (y - 0.5f * kNumGridSteps) / (0.5f * kNumGridSteps);
       for (int x = 0; x < kNumGridSteps; ++ x) {
-        float x_init = distorted_point.x() + kGridHalfExtent * (x - 0.5f * kNumGridSteps) / (0.5f * kNumGridSteps);
+        init_point.x() = distorted_point.x() + kGridHalfExtent * (x - 0.5f * kNumGridSteps) / (0.5f * kNumGridSteps);
         
         bool test_converged;
-        Eigen::Vector2f result = IterativeUndistort(distorted_point, x_init, y_init, &test_converged);
+        Eigen::Vector2f result = IterativeUndistort(distorted_point, init_point, &test_converged);
         if (test_converged) {
-          float radius = sqrtf(result.x() * result.x() + result.y() * result.y());
+          const float radius = result.norm();
           if (radius < kImproveThreshold * best_radius) {
             second_best_radius = best_radius;
             *second_best_result = best_result;
@@ -285,95 +291,79 @@ template <class Child> class CameraBaseImpl : public CameraBase {
     
     return best_result;
   }
+
+  template <typename Derived1, typename Derived2>
+  inline void ProjectionToDistortedDerivative(
+      const Eigen::MatrixBase<Derived1>& point, Eigen::MatrixBase<Derived2>& deriv_xy) const {
+    const Eigen::Vector2f normalized_point =
+        Eigen::Vector2f(point.x() / point.z(), point.y() / point.z());
+    if(normalized_point.squaredNorm() < radius_cutoff_squared_){
+      const float z_inv = 1.f/point.z();
+      const Eigen::Matrix2f distortion_deriv = static_cast<const Child*>(this)->DistortionDerivative(normalized_point);
+      Eigen::Matrix<float, 2, 3> normalize_deriv;
+      normalize_deriv.leftCols<2>() = Eigen::Matrix2f::Identity() * z_inv;
+      normalize_deriv.col(2) = -1.f * normalized_point * z_inv;
+      deriv_xy = distortion_deriv * normalize_deriv;
+    }else{
+      deriv_xy.setZero();
+    }
+  }
   
   // Returns the derivatives of the normalized projected coordinates with
   // respect to the 3D change of the input point.
-  template <typename Derived1, typename Derived2, typename Derived3>
+  template <typename Derived1, typename Derived2>
   inline void ProjectionToImageCoordinatesDerivative(
-      const Eigen::MatrixBase<Derived1>& point, Eigen::MatrixBase<Derived2>* deriv_x, Eigen::MatrixBase<Derived3>* deriv_y) const {
-    const Eigen::Vector2f normalized_point =
-        Eigen::Vector2f(point.x() / point.z(), point.y() / point.z());
-    if(normalized_point.squaredNorm() < radius_cutoff_squared_){
-      const Eigen::Vector4f distortion_deriv = static_cast<const Child*>(this)->DistortionDerivative(normalized_point);
-      const Eigen::Vector4f projection_deriv =
-          Eigen::Vector4f(fx() * distortion_deriv.x(),
-                      fx() * distortion_deriv.y(),
-                      fy() * distortion_deriv.z(),
-                      fy() * distortion_deriv.w());
-      *deriv_x = Eigen::Vector3f(
-          projection_deriv.x() / point.z(), projection_deriv.y() / point.z(),
-          -1.0f * (projection_deriv.x() * point.x() + projection_deriv.y() * point.y()) /
-              (point.z() * point.z()));
-      *deriv_y = Eigen::Vector3f(
-          projection_deriv.z() / point.z(), projection_deriv.w() / point.z(),
-          -1.0f * (projection_deriv.z() * point.x() + projection_deriv.w() * point.y()) /
-              (point.z() * point.z()));
-    }else{
-      *deriv_x = Eigen::Vector3f(0,0,0);
-      *deriv_y = Eigen::Vector3f(0,0,0);
-    }
-  }
-  template <typename Derived1, typename Derived2, typename Derived3>
-  inline void ProjectionToNormalizedTextureCoordinatesDerivative(
-      const Eigen::MatrixBase<Derived1>& point, Eigen::MatrixBase<Derived2>* deriv_x, Eigen::MatrixBase<Derived3>* deriv_y) const {
-    const Eigen::Vector2f normalized_point =
-        Eigen::Vector2f(point.x() / point.z(), point.y() / point.z());
-    if(normalized_point.squaredNorm() < radius_cutoff_squared_){
-      const Eigen::Vector4f distortion_deriv = static_cast<const Child*>(this)->DistortionDerivative(normalized_point);
-      const Eigen::Vector4f projection_deriv =
-          Eigen::Vector4f(nfx() * distortion_deriv.x(),
-                      nfx() * distortion_deriv.y(),
-                      nfy() * distortion_deriv.z(),
-                      nfy() * distortion_deriv.w());
-      *deriv_x = Eigen::Vector3f(
-          projection_deriv.x() / point.z(), projection_deriv.y() / point.z(),
-          -1.0f * (projection_deriv.x() * point.x() + projection_deriv.y() * point.y()) /
-              (point.z() * point.z()));
-      *deriv_y = Eigen::Vector3f(
-          projection_deriv.z() / point.z(), projection_deriv.w() / point.z(),
-          -1.0f * (projection_deriv.z() * point.x() + projection_deriv.w() * point.y()) /
-              (point.z() * point.z()));
-    }else{
-      *deriv_x = Eigen::Vector3f(0,0,0);
-      *deriv_y = Eigen::Vector3f(0,0,0);
-    }
+      const Eigen::MatrixBase<Derived1>& point, Eigen::MatrixBase<Derived2>& deriv_xy) const {
+    ProjectionToDistortedDerivative(point, deriv_xy);
+    deriv_xy = f().asDiagonal() * deriv_xy;
   }
 
-  template <typename Derived>
-  inline void ProjectionToImageCoordinatesDerivativeByIntrinsics(const Eigen::MatrixBase<Derived>& point, float* deriv_x, float* deriv_y) const {
+  template <typename Derived1, typename Derived2>
+  inline void ProjectionToNormalizedTextureCoordinatesDerivative(
+      const Eigen::MatrixBase<Derived1>& point, Eigen::MatrixBase<Derived2>& deriv_xy) const {
+    ProjectionToDistortedDerivative(point, deriv_xy);
+    deriv_xy = nf().asDiagonal() * deriv_xy;
+  }
+
+  template <typename Derived1, typename Derived2>
+  inline void ProjectionToImageCoordinatesDerivativeByIntrinsics(const Eigen::MatrixBase<Derived1>& point,
+                                                                 Eigen::MatrixBase<Derived2>& deriv_xy) const {
     const Child* child = static_cast<const Child*>(this);
     const Eigen::Vector2f normalized_point =
         Eigen::Vector2f(point.x() / point.z(), point.y() / point.z());
     if(normalized_point.squaredNorm() > radius_cutoff_squared_){
-      for (int i = 0; i < child->ParameterCount(); ++ i) {
-        deriv_x[i] = 0;
-        deriv_y[i] = 0;
-      }
+      deriv_xy.setZero();
       return;
     }else{
-      return child->NormalizedDerivativeByIntrinsics(normalized_point, deriv_x, deriv_y);
-    } 
-  }
+      const Eigen::Vector2f distorted_point = child->Distort(normalized_point);
+      if(!child->UniqueFocalLength()){
+        deriv_xy(0,0) = distorted_point.x();
+        deriv_xy(0,1) = 0.f;
+        deriv_xy(0,2) = 1.f;
+        deriv_xy(0,3) = 0.f;
+        deriv_xy(1,0) = 0.f;
+        deriv_xy(1,1) = distorted_point.y();
+        deriv_xy(1,2) = 0.f;
+        deriv_xy(1,3) = 1.f;
 
-  template <typename Derived>
-  inline void update_radius(const Eigen::Vector2f& nxy,
-                            const Eigen::MatrixBase<Derived>& second_best_result,
-                            bool converged,
-                            bool second_best_available,
-                            float increaseFactor,
-                            float* result, float* max_result) {
-    if (converged) {
-      float radius = nxy.norm();
-      if (increaseFactor * radius > *result) {
-        *result = increaseFactor * radius;
+        const int kBlockSize = child->ParameterCount() - 4;
+        auto distort_deriv = deriv_xy.template rightCols<kBlockSize>();
+        child->NormalizedDerivativeByIntrinsics(normalized_point, distort_deriv);
+        distort_deriv = f().asDiagonal() * distort_deriv;
+      }else{
+        deriv_xy(0,0) = distorted_point.x();
+        deriv_xy(0,1) = 1.f;
+        deriv_xy(0,2) = 0.f;
+        deriv_xy(1,0) = distorted_point.y();
+        deriv_xy(1,1) = 0.f;
+        deriv_xy(1,2) = 1.f;
+
+        const int kBlockSize = child->ParameterCount() - 3;
+        auto distort_deriv = deriv_xy.template rightCols<kBlockSize>();
+        child->NormalizedDerivativeByIntrinsics(normalized_point, distort_deriv);
+        distort_deriv = f().asDiagonal() * distort_deriv;
       }
-      if (second_best_available) {
-        float second_best_radius = sqrtf(second_best_result.x() * second_best_result.x() + second_best_result.y() * second_best_result.y());
-        if (second_best_radius < *max_result) {
-          *max_result = second_best_radius;
-        }
-      }
-    }
+    } 
   }
 
   inline void InitCutoff() {
@@ -383,50 +373,53 @@ template <class Child> class CameraBaseImpl : public CameraBase {
     // stop projecting points that are too far out. Those might otherwise get
     // projected into the image again at some point with certain distortion
     // parameter settings.
+
+    // For each point, store 2 candidate radii (if possible)
+    // We know that radius cutoff is above every smallest candidate, and below
+    // every largest candidate of every pair.
+    // Thus radius cutoff is in [max_p(s), min_p(l)], where s,l are small and large
+    // undistorted candidate square radii for point p.
+    // To avoid numerical approximation errors, here we choose
+    // radius_cutoff_squared = min(max_p(s) * kIncreaseFactor, min_p(l))
     
     // Disable cutoff while running this function such that the unprojection works.
-    radius_cutoff_squared_ = std::numeric_limits<float>::infinity();
-    float result = 0;
-    float maximum_result = std::numeric_limits<float>::infinity();
+    constexpr float inf = std::numeric_limits<float>::infinity();
+    radius_cutoff_squared_ = inf;
+    float min_candidate = 0;
+    float max_candidate = inf;
 
     bool converged;
-    Eigen::Vector2f second_best_result = Eigen::Vector2f::Zero();
+    Eigen::Vector2f second_best_result = Eigen::Vector2f::Constant(inf);
     bool second_best_available;
+
+    std::vector<Eigen::Vector2f, Eigen::aligned_allocator<Eigen::Vector2f>> test_points;
     
-    for (int x = 0; x < width_; ++ x) {
-      Eigen::Vector2f nxy = UndistortFromInside(
-          Eigen::Vector2f(fx_inv() * x + cx_inv(), fy_inv() * 0 + cy_inv()),
-          &converged, &second_best_result, &second_best_available);
-      update_radius(nxy, second_best_result,
-                    converged, second_best_available, kIncreaseFactor,
-                    &result, &maximum_result);
-      
-      nxy = UndistortFromInside(
-          Eigen::Vector2f(fx_inv() * x + cx_inv(), fy_inv() * (height_ - 1) + cy_inv()),
-          &converged, &second_best_result, &second_best_available);
-      update_radius(nxy, second_best_result,
-                    converged, second_best_available, kIncreaseFactor,
-                    &result, &maximum_result);
+    for (int x = 0; x < width_; ++ x){
+      test_points.push_back(Eigen::Vector2f(x, 0));
+      test_points.push_back(Eigen::Vector2f(x, height_ - 1));
+    }
+
+    for (int y = 0; y < height_; ++ y){
+      test_points.push_back(Eigen::Vector2f(0, y));
+      test_points.push_back(Eigen::Vector2f(width_, y));
+
+    }
+
+    for (Eigen::Vector2f test_point: test_points){
+      const Eigen::Vector2f nxy = UndistortFromInside(
+        ImagePlaneToWorld(test_point),
+        &converged, &second_best_result, &second_best_available);
+      if (converged) {
+        const float r2 = nxy.squaredNorm();
+        min_candidate = std::max(r2, min_candidate);
+        if (second_best_available) {
+          const float second_best_r2 = second_best_result.squaredNorm();
+          max_candidate = std::min(second_best_r2, max_candidate);
+        }
+      }
     }
     
-    for (int y = 1; y < height_ - 1; ++ y) {
-      Eigen::Vector2f nxy = UndistortFromInside(
-          Eigen::Vector2f(fx_inv() * 0 + cx_inv(), fy_inv() * y + cy_inv()),
-          &converged, &second_best_result, &second_best_available);
-      update_radius(nxy, second_best_result,
-                    converged, second_best_available, kIncreaseFactor,
-                    &result, &maximum_result);
-      
-      nxy = UndistortFromInside(
-          Eigen::Vector2f(fx_inv() * (width_ - 1) + cx_inv(), fy_inv() * y + cy_inv()),
-          &converged, &second_best_result, &second_best_available);
-      update_radius(nxy, second_best_result,
-                    converged, second_best_available, kIncreaseFactor,
-                    &result, &maximum_result);
-    }
-    
-    radius_cutoff_squared_= (result < maximum_result) ? result : maximum_result;
-    radius_cutoff_squared_ += 1;
+    radius_cutoff_squared_= std::min(min_candidate * kIncreaseFactor, max_candidate);
   }
 
   inline const float radius_cutoff_squared() const{

@@ -88,19 +88,13 @@ class FisheyeFOVCamera : public CameraBaseImpl<FisheyeFOVCamera> {
   // intrinsics. For x and y, 5 values each are returned for fx, fy, cx, cy,
   // omega.
   // NOTE: This could probably be optimized by re-using terms from Distort().
-  template <typename Derived>
+  template <typename Derived1, typename Derived2>
   inline void NormalizedDerivativeByIntrinsics(
-      const Eigen::MatrixBase<Derived>& normalized_point, float* deriv_x, float* deriv_y) const {
-    const Eigen::Vector2f distorted_point = Distort(normalized_point);
-    
-    // nx^2 + ny^2
+      const Eigen::MatrixBase<Derived1>& normalized_point, Eigen::MatrixBase<Derived2>& deriv_xy) const {
     const float radius_square = normalized_point.squaredNorm();
-    // sqrtf(nx^2 + ny^2)
     const float radius = sqrtf(radius_square);
-    // 4 * tan(omega / 2) * tan(omega / 2)
     const float four_tan_omega_half_square =
         two_tan_omega_half_ * two_tan_omega_half_;
-    // 1 + tan(omega / 2) * tan(omega / 2)
     const float tan_omega_half_square_plus_one =
         0.25f * four_tan_omega_half_square + 1.f;
     
@@ -110,27 +104,18 @@ class FisheyeFOVCamera : public CameraBaseImpl<FisheyeFOVCamera> {
         atan(two_tan_omega_half_ * radius);
     const float denominator_2 =
         omega() * omega() * radius;
-    
-    deriv_x[0] = distorted_point.x();
-    deriv_x[1] = 0.f;
-    deriv_x[2] = 1.f;
-    deriv_x[3] = 0.f;
-    deriv_x[4] =
+    deriv_xy(0,0) =
         (radius < kEpsilon) ?
         0.f :
-        ((fx() * normalized_point.x() * tan_omega_half_square_plus_one) /
+        ((normalized_point.x() * tan_omega_half_square_plus_one) /
              denominator_1 -
-         (fx() * normalized_point.x() * numerator_2) / denominator_2);
-    deriv_y[0] = 0.f;
-    deriv_y[1] = distorted_point.y();
-    deriv_y[2] = 0.f;
-    deriv_y[3] = 1.f;
-    deriv_y[4] =
+         (normalized_point.x() * numerator_2) / denominator_2);
+    deriv_xy(1,0) =
         (radius < kEpsilon) ?
         0.f :
-        ((fy() * normalized_point.y() * tan_omega_half_square_plus_one) /
+        ((normalized_point.y() * tan_omega_half_square_plus_one) /
              denominator_1 -
-         (fy() * normalized_point.y() * numerator_2) / denominator_2);
+         (normalized_point.y() * numerator_2) / denominator_2);
   }
   
   // Derivation with Matlab:
@@ -145,14 +130,14 @@ class FisheyeFOVCamera : public CameraBaseImpl<FisheyeFOVCamera> {
   // with dx,dy being the distorted coords and d the partial derivative
   // operator.
   template <typename Derived>
-  inline Eigen::Vector4f DistortionDerivative(const Eigen::MatrixBase<Derived>& normalized_point) const {
+  inline Eigen::Matrix2f DistortionDerivative(const Eigen::MatrixBase<Derived>& normalized_point) const {
     const float nx_times_ny = normalized_point.x() * normalized_point.y();
     const float nxs = normalized_point.x() * normalized_point.x();
     const float nys = normalized_point.y() * normalized_point.y();
     const float radius_square = nxs + nys;
     const float radius = sqrtf(radius_square);
     if (radius < kEpsilon) {
-      return Eigen::Vector4f(1, 0, 0, 1);
+      return (Eigen::Matrix2f() << 1, 0, 0, 1).finished();
     } else {
       const float rdw = atanf(radius * two_tan_omega_half_);
       const float two_tan_omega_half_square =
@@ -172,7 +157,7 @@ class FisheyeFOVCamera : public CameraBaseImpl<FisheyeFOVCamera> {
       const float ddy_dny =
           part3 - (nys * rdw) / part1 + (nys * two_tan_omega_half_) / part2;
 
-      return Eigen::Vector4f(ddx_dnx, ddx_dny, ddy_dnx, ddy_dny);
+      return (Eigen::Matrix2f() << ddx_dnx, ddx_dny, ddy_dnx, ddy_dny).finished();
     }
   }
 
