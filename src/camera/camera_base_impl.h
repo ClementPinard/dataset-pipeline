@@ -45,12 +45,12 @@ namespace camera {
 // Models pinhole cameras with a polynomial distortion model.
 template <class Child> class CameraBaseImpl : public CameraBase {
  public:
-  
+
   CameraBaseImpl(int width, int height, float fx, float fy, float cx, float cy, CameraBase::Type type)
   : CameraBase(width, height, fx, fy, cx, cy, type),
     undistortion_lookup_(nullptr),
     radius_cutoff_squared_(std::numeric_limits<float>::infinity()){}
-  
+
   ~CameraBaseImpl() {
   delete[] undistortion_lookup_;
   }
@@ -127,7 +127,7 @@ template <class Child> class CameraBaseImpl : public CameraBase {
       return WorldToTexturePlane(distorted_point);
     }
   }
-  
+
   template <typename Derived>
   inline Eigen::Vector2f ProjectToImageCoordinates(const Eigen::MatrixBase<Derived>& normalized_point) const {
     const float r2 = normalized_point.squaredNorm();
@@ -195,12 +195,12 @@ template <class Child> class CameraBaseImpl : public CameraBase {
       Eigen::Vector2f distorted_candidate = child->Distort(undistorted);
       // (Non-squared) residuals.
       Eigen::Vector2f delta_point = distorted_candidate - distorted_point;
-      
+
       // Accumulate H and b.
       const Eigen::Matrix2f Jd = child->DistortionDerivative(undistorted);
       const Eigen::Matrix2f Jd2 = Jd.transpose() * Jd;
       const Eigen::Vector2f step = (Jd2.inverse() * Jd) * delta_point;
-      undistorted.noalias() -= step;      
+      undistorted.noalias() -= step;
       if (step.squaredNorm() < kUndistortionEpsilon) {
         if (converged) {
           *converged = true;
@@ -208,7 +208,7 @@ template <class Child> class CameraBaseImpl : public CameraBase {
         break;
       }
     }
-    
+
     return undistorted;
   }
 
@@ -249,24 +249,24 @@ template <class Child> class CameraBaseImpl : public CameraBase {
     // Try different initialization points and take the result with the smallest
     // radius. Since this should be the only acceptable one, also store the second
     // smallest result. Thus we know the radius cutoff should be between the two
-    // 
+    //
     constexpr int kNumGridSteps = 10;
     constexpr float kGridHalfExtent = 1.5f;
     constexpr float kImproveThreshold = 0.99f;
-    
+
     *converged = false;
     *second_best_available = false;
-    
+
     float best_radius = std::numeric_limits<float>::infinity();
     Eigen::Vector2f best_result;
     float second_best_radius = std::numeric_limits<float>::infinity();
     Eigen::Vector2f init_point;
-    
+
     for (int y = 0; y < kNumGridSteps; ++ y) {
       init_point.y() = distorted_point.y() + kGridHalfExtent * (y - 0.5f * kNumGridSteps) / (0.5f * kNumGridSteps);
       for (int x = 0; x < kNumGridSteps; ++ x) {
         init_point.x() = distorted_point.x() + kGridHalfExtent * (x - 0.5f * kNumGridSteps) / (0.5f * kNumGridSteps);
-        
+
         bool test_converged;
         Eigen::Vector2f result = IterativeUndistort(distorted_point, init_point, &test_converged);
         if (test_converged) {
@@ -275,7 +275,7 @@ template <class Child> class CameraBaseImpl : public CameraBase {
             second_best_radius = best_radius;
             *second_best_result = best_result;
             *second_best_available = *converged;
-            
+
             best_radius = radius;
             best_result = result;
             *converged = true;
@@ -288,7 +288,7 @@ template <class Child> class CameraBaseImpl : public CameraBase {
         }
       }
     }
-    
+
     return best_result;
   }
 
@@ -308,7 +308,7 @@ template <class Child> class CameraBaseImpl : public CameraBase {
       deriv_xy.setZero();
     }
   }
-  
+
   // Returns the derivatives of the normalized projected coordinates with
   // respect to the 3D change of the input point.
   template <typename Derived1, typename Derived2>
@@ -363,12 +363,12 @@ template <class Child> class CameraBaseImpl : public CameraBase {
         child->NormalizedDerivativeByIntrinsics(normalized_point, distort_deriv);
         distort_deriv = f().asDiagonal() * distort_deriv;
       }
-    } 
+    }
   }
 
   inline void InitCutoff() {
     constexpr float kIncreaseFactor = 1.01f;
-    
+
     // Unproject some sample points at the image borders to find out where to
     // stop projecting points that are too far out. Those might otherwise get
     // projected into the image again at some point with certain distortion
@@ -381,7 +381,7 @@ template <class Child> class CameraBaseImpl : public CameraBase {
     // undistorted candidate square radii for point p.
     // To avoid numerical approximation errors, here we choose
     // radius_cutoff_squared = min(max_p(s) * kIncreaseFactor, min_p(l))
-    
+
     // Disable cutoff while running this function such that the unprojection works.
     constexpr float inf = std::numeric_limits<float>::infinity();
     radius_cutoff_squared_ = inf;
@@ -393,7 +393,7 @@ template <class Child> class CameraBaseImpl : public CameraBase {
     bool second_best_available;
 
     std::vector<Eigen::Vector2f, Eigen::aligned_allocator<Eigen::Vector2f>> test_points;
-    
+
     for (int x = 0; x < width_; ++ x){
       test_points.push_back(Eigen::Vector2f(x, 0));
       test_points.push_back(Eigen::Vector2f(x, height_ - 1));
@@ -418,14 +418,14 @@ template <class Child> class CameraBaseImpl : public CameraBase {
         }
       }
     }
-    
+
     radius_cutoff_squared_= std::min(min_candidate * kIncreaseFactor, max_candidate);
   }
 
   inline const float radius_cutoff_squared() const{
     return radius_cutoff_squared_;
   }
-  
+
  protected:
   Eigen::Vector2f* undistortion_lookup_;
   float radius_cutoff_squared_;

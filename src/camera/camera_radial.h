@@ -44,9 +44,9 @@ class RadialCamera : public RadialBase<RadialCamera> {
  public:
   RadialCamera(int width, int height, float fx, float fy, float cx,
                    float cy, float k1, float k2);
-  
+
   RadialCamera(int width, int height, const float* parameters);
-  
+
   static constexpr int ParameterCount() {
     return 4 + 2;
   }
@@ -65,7 +65,7 @@ class RadialCamera : public RadialBase<RadialCamera> {
   inline void NormalizedDerivativeByIntrinsics(
       const Eigen::MatrixBase<Derived1>& normalized_point, Eigen::MatrixBase<Derived2>& deriv_xy) const {
     const float radius_square = normalized_point.squaredNorm();
-    
+
     deriv_xy(0,0) = normalized_point.x() * radius_square;
     deriv_xy(0,1) = deriv_xy(0,0) * radius_square;
     deriv_xy(1,0) = normalized_point.y() * radius_square;
@@ -99,7 +99,7 @@ class RadialCamera : public RadialBase<RadialCamera> {
     const float k2 = distortion_parameters_.y();
     return 1.f + r2 * (3.f * k1 + r2 * 5.f * k2) ;
   }
-  
+
   inline void GetParameters(float* parameters) const {
     parameters[0] = fx();
     parameters[1] = fy();
@@ -113,7 +113,7 @@ class RadialCamera : public RadialBase<RadialCamera> {
   inline const Eigen::Vector2f& distortion_parameters() const {
     return distortion_parameters_;
   }
-  
+
   // The distortion parameters p1, p2, and p3.
   Eigen::Vector2f distortion_parameters_;
 

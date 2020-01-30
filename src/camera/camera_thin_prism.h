@@ -45,13 +45,13 @@ class ThinPrismCamera : public CameraBaseImpl<ThinPrismCamera> {
                   float cx, float cy, float k1, float k2,
                   float p1, float p2, float k3, float k4,
                   float sx1, float sy1);
-  
+
   ThinPrismCamera(int width, int height, const float* parameters);
-  
+
   static constexpr int ParameterCount() {
     return 4 + 8;
   }
-  
+
   template <typename Derived>
   inline Eigen::Vector2f Distort(const Eigen::MatrixBase<Derived>& normalized_point) const {
     const float k1 = distortion_parameters_[0];
@@ -62,19 +62,19 @@ class ThinPrismCamera : public CameraBaseImpl<ThinPrismCamera> {
     const float k4 = distortion_parameters_[5];
     const float sx1 = distortion_parameters_[6];
     const float sy1 = distortion_parameters_[7];
-    
+
     const float x2 = normalized_point.x() * normalized_point.x();
     const float xy = normalized_point.x() * normalized_point.y();
     const float y2 = normalized_point.y() * normalized_point.y();
     const float r2 = x2 + y2;
-    
+
     const float radial =
         1 + r2 * (k1 + r2 * (k2 + r2 * (k3 + r2 * k4)));
     const Eigen::Vector2f dx_dy(2.f * p1 * xy + p2 * (r2 + 2.f * x2) + sx1 * r2,
                                 2.f * p2 * xy + p1 * (r2 + 2.f * y2) + sy1 * r2);
     return normalized_point * radial + dx_dy;
   }
-  
+
   // Returns the derivatives of the image coordinates with respect to the
   // intrinsics. For x and y, 12 values each are returned for fx, fy, cx, cy,
   // k1, k2, p1, p2, k3, k4, sx1, sy1.
@@ -95,7 +95,7 @@ class ThinPrismCamera : public CameraBaseImpl<ThinPrismCamera> {
     deriv_xy(0,5) = deriv_xy(0,4) * r2;
     deriv_xy(0,6) = r2;
     deriv_xy(0,7) = 0;
-    
+
     deriv_xy(1,0) = ny * r2;
     deriv_xy(1,1) = deriv_xy(1,0) * r2;
     deriv_xy(1,2) = (r2 + 2.f * ny2);
@@ -105,7 +105,7 @@ class ThinPrismCamera : public CameraBaseImpl<ThinPrismCamera> {
     deriv_xy(1,6) = 0;
     deriv_xy(1,7) = r2;
   }
-  
+
   template <typename Derived>
   inline Eigen::Matrix2f DistortionDerivative(const Eigen::MatrixBase<Derived>& normalized_point) const {
     const float nx = normalized_point.x();
@@ -118,7 +118,7 @@ class ThinPrismCamera : public CameraBaseImpl<ThinPrismCamera> {
     const float k4 = distortion_parameters_[5];
     const float sx1 = distortion_parameters_[6];
     const float sy1 = distortion_parameters_[7];
-    
+
     const float nx_ny = nx * ny;
     const float nx2 = nx * nx;
     const float ny2 = ny * ny;
@@ -155,10 +155,10 @@ class ThinPrismCamera : public CameraBaseImpl<ThinPrismCamera> {
   }
 
  private:
-  
+
   // The distortion parameters k1, k2, p1, p2, k3, k4, sx1, sy1.
   float distortion_parameters_[8];
-  
+
 };
 
 }  // namespace camera

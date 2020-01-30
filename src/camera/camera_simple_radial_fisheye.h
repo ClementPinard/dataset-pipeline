@@ -44,7 +44,7 @@ class SimpleRadialFisheyeCamera : public FisheyeBase<SimpleRadialCamera, SimpleR
  public:
   SimpleRadialFisheyeCamera(int width, int height, float f,
                             float cx, float cy, float k);
-  
+
   SimpleRadialFisheyeCamera(int width, int height, const float* parameters);
 };
 }  // namespace camera

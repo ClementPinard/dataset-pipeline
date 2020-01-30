@@ -73,7 +73,7 @@ class FisheyeBase : public CameraBaseImpl<Child>{
       return model_no_fisheye_->Distort(normalized_point);
     }
   }
-  
+
   template <typename Derived>
   inline Eigen::Vector2f Undistort(const Eigen::MatrixBase<Derived>& distorted_point) const {
     const Eigen::Vector2f undistorted_point = model_no_fisheye_->Undistort(distorted_point);
@@ -100,7 +100,7 @@ class FisheyeBase : public CameraBaseImpl<Child>{
       const float theta_by_r = atan2(r, 1.f) / r;
       const float term1 = r2 * (r2 + 1);
       const float term2 = theta_by_r / r2;
-      
+
       // Derivatives of fisheye x / y coordinates by nx / ny:
       const float dnxf_dnx = ny2 * term2 + nx2 / term1;
       const float dnxf_dny = nx_ny / term1 - nx_ny * term2;

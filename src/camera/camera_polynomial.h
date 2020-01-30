@@ -44,9 +44,9 @@ class PolynomialCamera : public RadialBase<PolynomialCamera> {
  public:
   PolynomialCamera(int width, int height, float fx, float fy, float cx,
                    float cy, float k1, float k2, float k3);
-  
+
   PolynomialCamera(int width, int height, const float* parameters);
-  
+
   static constexpr int ParameterCount() {
     return 4 + 3;
   }
@@ -63,7 +63,7 @@ class PolynomialCamera : public RadialBase<PolynomialCamera> {
   inline void NormalizedDerivativeByIntrinsics(
       const Eigen::MatrixBase<Derived1>& normalized_point, Eigen::MatrixBase<Derived2>& deriv_xy) const {
     const float radius_square = normalized_point.squaredNorm();
-    
+
     deriv_xy(0,0) = normalized_point.x() * radius_square;
     deriv_xy(0,1) = deriv_xy(0,0) * radius_square;
     deriv_xy(0,2) = deriv_xy(0,1) * radius_square;
@@ -101,7 +101,7 @@ class PolynomialCamera : public RadialBase<PolynomialCamera> {
                   r2 * (5.0f * distortion_parameters_.y() +
                   r2 * 7.0f * distortion_parameters_.z()));
   }
-  
+
   inline void GetParameters(float* parameters) const {
     parameters[0] = fx();
     parameters[1] = fy();
@@ -118,7 +118,7 @@ class PolynomialCamera : public RadialBase<PolynomialCamera> {
   }
 
  private:
-  
+
   // The distortion parameters k1, k2, and k3.
   Eigen::Vector3f distortion_parameters_;
 

@@ -46,9 +46,9 @@ class FisheyeFOVCamera : public CameraBaseImpl<FisheyeFOVCamera> {
  public:
   FisheyeFOVCamera(int width, int height, float fx, float fy, float cx,
                    float cy, float omega);
-  
+
   FisheyeFOVCamera(int width, int height, const float* parameters);
-  
+
   static constexpr int ParameterCount() {
     return 4 + 1;
   }
@@ -66,12 +66,12 @@ class FisheyeFOVCamera : public CameraBaseImpl<FisheyeFOVCamera> {
   inline Eigen::Vector2f UnprojectFromImageCoordinates(const int x, const int y) const {
     return Undistort(Eigen::Vector2f(fx_inv() * x + cx_inv(), fy_inv() * y + cy_inv()));
   }
-  
+
   template <typename Derived>
   inline Eigen::Vector2f UnprojectFromImageCoordinates(const Eigen::MatrixBase<Derived>& pixel_position) const {
     return Undistort(Eigen::Vector2f(fx_inv() * pixel_position.x() + cx_inv(), fy_inv() * pixel_position.y() + cy_inv()));
   }
-  
+
   template <typename Derived>
   inline Eigen::Vector2f Undistort(const Eigen::MatrixBase<Derived>& distorted_point) const {
     const float r = distorted_point.norm();
@@ -83,7 +83,7 @@ class FisheyeFOVCamera : public CameraBaseImpl<FisheyeFOVCamera> {
         (tanf(r * omega_) / (r * two_tan_omega_half_));
     return factor * distorted_point;
   }
-  
+
   // Returns the derivatives of the image coordinates with respect to the
   // intrinsics. For x and y, 5 values each are returned for fx, fy, cx, cy,
   // omega.
@@ -97,7 +97,7 @@ class FisheyeFOVCamera : public CameraBaseImpl<FisheyeFOVCamera> {
         two_tan_omega_half_ * two_tan_omega_half_;
     const float tan_omega_half_square_plus_one =
         0.25f * four_tan_omega_half_square + 1.f;
-    
+
     const float denominator_1 =
         omega() * (four_tan_omega_half_square * radius_square + 1.f);
     const float numerator_2 =
@@ -117,7 +117,7 @@ class FisheyeFOVCamera : public CameraBaseImpl<FisheyeFOVCamera> {
              denominator_1 -
          (normalized_point.y() * numerator_2) / denominator_2);
   }
-  
+
   // Derivation with Matlab:
   // syms nx ny omega
   // fact(nx, ny) = atan(sqrt(nx*nx + ny*ny) * 2*tan(omega/2)) /
@@ -168,14 +168,14 @@ class FisheyeFOVCamera : public CameraBaseImpl<FisheyeFOVCamera> {
     parameters[3] = cy();
     parameters[4] = omega();
   }
-  
+
   inline float omega() const { return omega_; }
 
  private:
   float omega_;
   float two_tan_omega_half_;
   float image_radius_;
-  
+
   static constexpr float kEpsilon = 1e-6f;
 };
 }  // namespace camera

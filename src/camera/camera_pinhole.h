@@ -40,27 +40,27 @@ namespace camera {
 class PinholeCamera : public CameraBaseImpl<PinholeCamera> {
  public:
   PinholeCamera(int width, int height, float fx, float fy, float cx, float cy);
-  
+
   PinholeCamera(int width, int height, const float* parameters);
-  
+
   static constexpr int ParameterCount() {
     return 4;
   }
-  
+
   template <typename Derived>
   inline Eigen::Vector2f Distort(const Eigen::MatrixBase<Derived>& normalized_point) const {
     return normalized_point;
   }
-  
+
   inline Eigen::Vector2f UnprojectFromImageCoordinates(const int x, const int y) const {
     return Undistort(Eigen::Vector2f(fx_inv() * x + cx_inv(), fy_inv() * y + cy_inv()));
   }
-  
+
   template <typename Derived>
   inline Eigen::Vector2f UnprojectFromImageCoordinates(const Eigen::MatrixBase<Derived>& pixel_position) const {
     return Undistort(Eigen::Vector2f(fx_inv() * pixel_position.x() + cx_inv(), fy_inv() * pixel_position.y() + cy_inv()));
   }
-  
+
   template <typename Derived>
   inline Eigen::Vector2f Undistort(const Eigen::MatrixBase<Derived>& normalized_point) const {
     return normalized_point;
@@ -71,12 +71,12 @@ class PinholeCamera : public CameraBaseImpl<PinholeCamera> {
   template <typename Derived1, typename Derived2>
   inline void NormalizedDerivativeByIntrinsics(
       const Eigen::MatrixBase<Derived1>& normalized_point, Eigen::MatrixBase<Derived2>& deriv_xy) const {}
-  
+
   template <typename Derived>
   inline Eigen::Matrix2f DistortionDerivative(const Eigen::MatrixBase<Derived>& /*normalized_point*/) const {
     return (Eigen::Matrix2f() << 1, 0, 0, 1).finished();
   }
-  
+
   inline void GetParameters(float* parameters) const {
     parameters[0] = fx();
     parameters[1] = fy();

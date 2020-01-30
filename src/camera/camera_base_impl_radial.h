@@ -44,7 +44,7 @@ namespace camera {
 
 template <class Child> class RadialBase : public CameraBaseImpl<Child> {
  public:
-  
+
   RadialBase(int width, int height, float fx, float fy, float cx, float cy, CameraBase::Type type)
   : CameraBaseImpl<Child>(width, height, fx, fy, cx, cy, type){}
 
@@ -78,12 +78,12 @@ template <class Child> class RadialBase : public CameraBaseImpl<Child> {
       float r_candidate = undistorted_r * child->DistortionFactor(undistorted_r2);
       // (Non-squared) residuals.
       float delta_r = r_candidate - distorted_r;
-      
+
       // Accumulate H and b.
       const float deriv = child->DistortionDerivative(undistorted_r2);
       const float step = delta_r / deriv;
       undistorted_r -= step;
-      undistorted_r2 = undistorted_r * undistorted_r;  
+      undistorted_r2 = undistorted_r * undistorted_r;
       if (step * step < kUndistortionEpsilon) {
         if (converged) {
           *converged = true;
@@ -91,7 +91,7 @@ template <class Child> class RadialBase : public CameraBaseImpl<Child> {
         break;
       }
     }
-    
+
     return distorted_point * distorted_point.norm() / undistorted_r;
   }
 

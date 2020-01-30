@@ -35,6 +35,7 @@
 #include <QKeyEvent>
 #include <QMessageBox>
 #include <Eigen/Core>
+#include <Eigen/StdVector>
 
 namespace dataset_inspector {
 
@@ -96,7 +97,7 @@ bool LocalizeImageTool::mousePressEvent(QMouseEvent* event, QPointF image_xy) {
     // Find the closest 3D point and select it.
     float minimum_squared_distance = std::numeric_limits<float>::infinity();
     selected_point_index_ = -1;
-    const std::vector<ScanPoint>& scan_points = image_widget_->scan_points();
+    const std::vector<ScanPoint,Eigen::aligned_allocator<ScanPoint> >& scan_points = image_widget_->scan_points();
     for (const ScanPoint& scan_point : scan_points) {
       Eigen::Vector2f delta_p = scan_point.image_p - image_p;
       

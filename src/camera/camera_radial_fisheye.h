@@ -44,7 +44,7 @@ class RadialFisheyeCamera : public FisheyeBase<RadialCamera, RadialFisheyeCamera
  public:
   RadialFisheyeCamera(int width, int height, float fx, float fy,
                       float cx, float cy, float k1, float k2);
-  
+
   RadialFisheyeCamera(int width, int height, const float* parameters);
 };
 }  // namespace camera

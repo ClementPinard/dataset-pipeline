@@ -44,9 +44,9 @@ class SimpleRadialCamera : public RadialBase<SimpleRadialCamera> {
  public:
   SimpleRadialCamera(int width, int height, float f,
                      float cx, float cy, float k);
-  
+
   SimpleRadialCamera(int width, int height, const float* parameters);
-  
+
   static constexpr int ParameterCount() {
     return 3 + 1;
   }
@@ -69,7 +69,7 @@ class SimpleRadialCamera : public RadialBase<SimpleRadialCamera> {
     deriv_xy(0,0) = normalized_point.x() * radius_square;
     deriv_xy(1,0) = normalized_point.y() * radius_square;
   }
-  
+
   // Derivation with Matlab:
   // syms nx ny px py pz
   // ru2 = nx*nx + ny*ny
@@ -101,7 +101,7 @@ class SimpleRadialCamera : public RadialBase<SimpleRadialCamera> {
   inline float DistortionDerivative(const float r2) const {
     return 1.f + 3.f * k1_ * r2;
   }
-  
+
   inline void GetParameters(float* parameters) const {
     parameters[0] = fx();
     parameters[1] = cx();
@@ -115,7 +115,7 @@ class SimpleRadialCamera : public RadialBase<SimpleRadialCamera> {
   }
 
  private:
-  
+
   // The distortion parameter k
   float k1_;
 };

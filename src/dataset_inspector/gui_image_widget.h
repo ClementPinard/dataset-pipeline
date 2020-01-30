@@ -133,7 +133,7 @@ class ImageWidget : public QWidget
   inline const opt::Intrinsics& intrinsics() const { return *intrinsics_; }
   inline opt::Intrinsics* intrinsics_mutable() { return intrinsics_; }
   inline opt::Image* image_mutable() { return image_; }
-  inline const std::vector<ScanPoint>& scan_points() const { return scan_points_; }
+  inline const std::vector<ScanPoint,Eigen::aligned_allocator<ScanPoint> >& scan_points() const { return scan_points_; }
   inline const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& colored_point_cloud() const { return colored_point_cloud_; }
   
  protected:

@@ -45,7 +45,7 @@ class FisheyePolynomialTangentialCamera : public FisheyeBase<PolynomialTangentia
   FisheyePolynomialTangentialCamera(int width, int height, float fx, float fy,
                                     float cx, float cy, float k1, float k2,
                                     float p1, float p2);
-  
+
   FisheyePolynomialTangentialCamera(int width, int height, const float* parameters);
 };
 

@@ -47,7 +47,7 @@ class BenchmarkCamera : public FisheyeBase<ThinPrismCamera, BenchmarkCamera> {
                   float cx, float cy, float k1, float k2,
                   float p1, float p2, float k3, float k4,
                   float sx1, float sy1);
-  
+
   BenchmarkCamera(int width, int height, const float* parameters);
 };
 

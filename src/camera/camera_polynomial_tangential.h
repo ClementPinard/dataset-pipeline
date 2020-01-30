@@ -43,9 +43,9 @@ class PolynomialTangentialCamera : public CameraBaseImpl<PolynomialTangentialCam
  public:
   PolynomialTangentialCamera(int width, int height, float fx, float fy, float cx,
                              float cy, float k1, float k2, float p1, float p2);
-  
+
   PolynomialTangentialCamera(int width, int height, const float* parameters);
-  
+
   static constexpr int ParameterCount() {
     return 4 + 4;
   }
@@ -67,22 +67,22 @@ class PolynomialTangentialCamera : public CameraBaseImpl<PolynomialTangentialCam
                                 2.f * p2 * xy + p1 * (r2 + 2.f * y2));
     return normalized_point * radial + dx_dy;
   }
-  
-  
+
+
   // Returns the derivatives of the image coordinates with respect to the
   // intrinsics. For x and y, 8 values each are returned for fx, fy, cx, cy,
   // k1, k2, p1, p2.
   template <typename Derived1, typename Derived2>
   inline void NormalizedDerivativeByIntrinsics(
       const Eigen::MatrixBase<Derived1>& normalized_point, Eigen::MatrixBase<Derived2>& deriv_xy) const {
-    
+
     const float nx = normalized_point.x();
     const float ny = normalized_point.y();
     const float nx2 = nx * nx;
     const float ny2 = ny * ny;
     const float two_nx_ny = 2.f * nx * ny;
     const float r2 = nx2 + ny2;
-    
+
     deriv_xy(0,0) = nx * r2;
     deriv_xy(0,1) = deriv_xy(0,0) * r2;
     deriv_xy(0,2) = two_nx_ny;
@@ -92,7 +92,7 @@ class PolynomialTangentialCamera : public CameraBaseImpl<PolynomialTangentialCam
     deriv_xy(1,2) = (r2 + 2.f * ny2);
     deriv_xy(1,3) = two_nx_ny;
   }
-  
+
   // Derivation with Matlab:
   // syms nx ny k1 k2 p1 p2
   // x2 = nx * nx;
@@ -133,7 +133,7 @@ class PolynomialTangentialCamera : public CameraBaseImpl<PolynomialTangentialCam
     const float ddx_dny = nx * ny * term1 + 2*p1*nx + 2*p2*ny;
     const float ddy_dnx = ddx_dny;
     const float ddy_dny = ny2 * term1 + term2 + 2*p2*nx + 6*p1*ny;
-    
+
     return (Eigen::Matrix2f() << ddx_dnx, ddx_dny, ddy_dnx, ddy_dny).finished();
   }
 
@@ -147,14 +147,14 @@ class PolynomialTangentialCamera : public CameraBaseImpl<PolynomialTangentialCam
     parameters[6] = distortion_parameters_.z();
     parameters[7] = distortion_parameters_.w();
   }
-  
+
   // Returns the distortion parameters p1, p2, and p3.
   inline const Eigen::Vector4f& distortion_parameters() const {
     return distortion_parameters_;
   }
 
  private:
-  
+
   // The distortion parameters k1, k2, p1, p2.
   Eigen::Vector4f distortion_parameters_;
 };

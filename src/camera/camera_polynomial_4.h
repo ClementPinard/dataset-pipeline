@@ -44,14 +44,14 @@ class Polynomial4Camera : public RadialBase<Polynomial4Camera> {
  public:
   Polynomial4Camera(int width, int height, float fx, float fy, float cx,
                            float cy, float k1, float k2, float k3, float k4);
-  
+
   Polynomial4Camera(int width, int height, const float* parameters);
-  
+
   static constexpr int ParameterCount() {
     return 4 + 4;
   }
 
-  
+
   inline float DistortionFactor(const float r2) const {
     const float k1 = distortion_parameters_[0];
     const float k2 = distortion_parameters_[1];
@@ -65,7 +65,7 @@ class Polynomial4Camera : public RadialBase<Polynomial4Camera> {
   inline void NormalizedDerivativeByIntrinsics(
       const Eigen::MatrixBase<Derived1>& normalized_point, Eigen::MatrixBase<Derived2>& deriv_xy) const {
     const float radius_square = normalized_point.squaredNorm();
-    
+
     deriv_xy(0,0) = normalized_point.x() * radius_square;
     deriv_xy(0,1) = deriv_xy(0,0) * radius_square;
     deriv_xy(0,2) = deriv_xy(0,1) * radius_square;
@@ -111,7 +111,7 @@ class Polynomial4Camera : public RadialBase<Polynomial4Camera> {
                   r2 * (7.0f * k3 +
                   r2 * (9.0f * k4))));
   }
-  
+
   inline void
   GetParameters(float* parameters) const {
     parameters[0] = fx();
@@ -132,7 +132,7 @@ class Polynomial4Camera : public RadialBase<Polynomial4Camera> {
  private:
   // The distortion parameters k1, k2, k3, k4.
   float distortion_parameters_[4];
-  
+
   static constexpr float kEpsilon = 1e-6f;
 };
 

@@ -40,12 +40,12 @@ class CameraFactoryBase {
   CameraFactoryBase(CameraBase::Type type, const std::string& name)
       : type_(type),
         name_(name) {}
-  
+
   virtual CameraBase* Create(int width, int height, const float* parameters) const = 0;
-  
+
   inline CameraBase::Type type() const { return type_; }
   inline std::string name() const { return name_; }
-  
+
  private:
   CameraBase::Type type_;
   std::string name_;
@@ -56,7 +56,7 @@ class CameraFactory : public CameraFactoryBase {
  public:
   CameraFactory(CameraBase::Type type, const std::string& name)
       : CameraFactoryBase(type, name) {}
-  
+
   CameraBase* Create(int width, int height, const float* parameters) const override {
     return new CameraT(width, height, parameters);
   }
@@ -92,7 +92,7 @@ CameraBase* CreateCamera(CameraBase::Type type, int width, int height, const flo
       return item->Create(width, height, parameters);
     }
   }
-  
+
   LOG(ERROR) << "Unsupported camera type: " << static_cast<int>(type);
   return nullptr;
 }
@@ -103,7 +103,7 @@ std::string TypeToString(CameraBase::Type type) {
       return item->name();
     }
   }
-  
+
   LOG(ERROR) << "Unsupported camera type: " << static_cast<int>(type);
   return "INVALID";
 }
@@ -114,7 +114,7 @@ CameraBase::Type StringToType(const std::string& type) {
       return item->type();
     }
   }
-  
+
   LOG(ERROR) << "Unsupported camera type: " << type;
   return CameraBase::Type::kInvalid;
 }
